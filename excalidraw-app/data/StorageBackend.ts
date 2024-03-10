@@ -2,6 +2,7 @@ import { SyncableExcalidrawElement } from ".";
 import { ExcalidrawElement, FileId } from "../../packages/excalidraw/element/types";
 import { AppState, BinaryFileData } from "../../packages/excalidraw/types";
 import Portal from "../collab/Portal";
+import type { Socket } from "socket.io-client";
 
 export interface StorageBackend {
   isSaved: (portal: Portal, elements: readonly ExcalidrawElement[]) => boolean;
@@ -13,7 +14,7 @@ export interface StorageBackend {
   loadFromStorageBackend: (
     roomId: string,
     roomKey: string,
-    socket: SocketIOClient.Socket | null,
+    socket: Socket | null,
   ) => Promise<readonly ExcalidrawElement[] | null>;
   saveFilesToStorageBackend: ({
     prefix,
