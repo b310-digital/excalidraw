@@ -1,15 +1,17 @@
 import { COLOR_PALETTE } from "./colors";
 import {
+  ARROW_TYPE,
   DEFAULT_ELEMENT_PROPS,
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
   DEFAULT_TEXT_ALIGN,
+  DEFAULT_GRID_SIZE,
   EXPORT_SCALES,
+  STATS_PANELS,
   THEME,
+  DEFAULT_GRID_STEP,
 } from "./constants";
-import { t } from "./i18n";
-import { AppState, NormalizedZoomValue } from "./types";
-import { getDateTime } from "./utils";
+import type { AppState, NormalizedZoomValue } from "./types";
 
 const defaultExportScale = EXPORT_SCALES.includes(devicePixelRatio)
   ? devicePixelRatio
@@ -34,12 +36,14 @@ export const getDefaultAppState = (): Omit<
     currentItemStartArrowhead: null,
     currentItemStrokeColor: DEFAULT_ELEMENT_PROPS.strokeColor,
     currentItemRoundness: "round",
+    currentItemArrowType: ARROW_TYPE.round,
     currentItemStrokeStyle: DEFAULT_ELEMENT_PROPS.strokeStyle,
     currentItemStrokeWidth: DEFAULT_ELEMENT_PROPS.strokeWidth,
     currentItemTextAlign: DEFAULT_TEXT_ALIGN,
+    currentHoveredFontFamily: null,
     cursorButton: "up",
     activeEmbeddable: null,
-    draggingElement: null,
+    newElement: null,
     editingElement: null,
     editingGroupId: null,
     editingLinearElement: null,
@@ -57,7 +61,9 @@ export const getDefaultAppState = (): Omit<
     exportEmbedScene: false,
     exportWithDarkMode: false,
     fileHandle: null,
-    gridSize: null,
+    gridSize: DEFAULT_GRID_SIZE,
+    gridStep: DEFAULT_GRID_STEP,
+    gridModeEnabled: false,
     isBindingEnabled: true,
     defaultSidebarDockedPreference: false,
     isLoading: false,
@@ -65,7 +71,7 @@ export const getDefaultAppState = (): Omit<
     isRotating: false,
     lastPointerDownWith: "mouse",
     multiElement: null,
-    name: `${t("labels.untitled")}-${getDateTime()}`,
+    name: null,
     contextMenu: null,
     openMenu: null,
     openPopup: null,
@@ -82,7 +88,10 @@ export const getDefaultAppState = (): Omit<
     selectedElementsAreBeingDragged: false,
     selectionElement: null,
     shouldCacheIgnoreZoom: false,
-    showStats: false,
+    stats: {
+      open: false,
+      panels: STATS_PANELS.generalStats | STATS_PANELS.elementProperties,
+    },
     startBoundElement: null,
     suggestedBindings: [],
     frameRendering: { enabled: true, clip: true, name: true, outline: true },
@@ -140,6 +149,11 @@ const APP_STATE_STORAGE_CONF = (<
     export: false,
     server: false,
   },
+  currentItemArrowType: {
+    browser: true,
+    export: false,
+    server: false,
+  },
   currentItemOpacity: { browser: true, export: false, server: false },
   currentItemRoughness: { browser: true, export: false, server: false },
   currentItemStartArrowhead: { browser: true, export: false, server: false },
@@ -147,9 +161,10 @@ const APP_STATE_STORAGE_CONF = (<
   currentItemStrokeStyle: { browser: true, export: false, server: false },
   currentItemStrokeWidth: { browser: true, export: false, server: false },
   currentItemTextAlign: { browser: true, export: false, server: false },
+  currentHoveredFontFamily: { browser: false, export: false, server: false },
   cursorButton: { browser: true, export: false, server: false },
   activeEmbeddable: { browser: false, export: false, server: false },
-  draggingElement: { browser: false, export: false, server: false },
+  newElement: { browser: false, export: false, server: false },
   editingElement: { browser: false, export: false, server: false },
   editingGroupId: { browser: true, export: false, server: false },
   editingLinearElement: { browser: false, export: false, server: false },
@@ -163,6 +178,8 @@ const APP_STATE_STORAGE_CONF = (<
   exportWithDarkMode: { browser: true, export: false, server: false },
   fileHandle: { browser: false, export: false, server: false },
   gridSize: { browser: true, export: true, server: true },
+  gridStep: { browser: true, export: true, server: true },
+  gridModeEnabled: { browser: true, export: true, server: true },
   height: { browser: false, export: false, server: false },
   isBindingEnabled: { browser: false, export: false, server: false },
   defaultSidebarDockedPreference: {
@@ -198,7 +215,7 @@ const APP_STATE_STORAGE_CONF = (<
   },
   selectionElement: { browser: false, export: false, server: false },
   shouldCacheIgnoreZoom: { browser: true, export: false, server: false },
-  showStats: { browser: true, export: false, server: false },
+  stats: { browser: true, export: false, server: false },
   startBoundElement: { browser: false, export: false, server: false },
   suggestedBindings: { browser: false, export: false, server: false },
   frameRendering: { browser: false, export: false, server: false },

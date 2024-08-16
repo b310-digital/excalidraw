@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import React from "react";
-import { ActionManager } from "../actions/manager";
+import type { ActionManager } from "../actions/manager";
 import {
   CLASSES,
   DEFAULT_SIDEBAR,
@@ -8,10 +8,11 @@ import {
   TOOL_TYPE,
 } from "../constants";
 import { showSelectedShapeActions } from "../element";
-import { NonDeletedExcalidrawElement } from "../element/types";
-import { Language, t } from "../i18n";
+import type { NonDeletedExcalidrawElement } from "../element/types";
+import type { Language } from "../i18n";
+import { t } from "../i18n";
 import { calculateScrollCenter } from "../scene";
-import {
+import type {
   AppProps,
   AppState,
   ExcalidrawProps,
@@ -38,8 +39,6 @@ import { JSONExportDialog } from "./JSONExportDialog";
 import { PenModeButton } from "./PenModeButton";
 import { trackEvent } from "../analytics";
 import { useDevice } from "./App";
-import { Stats } from "./Stats";
-import { actionToggleStats } from "../actions/actionToggleStats";
 import Footer from "./footer/Footer";
 import { isSidebarDockedAtom } from "./Sidebar/Sidebar";
 import { jotaiScope } from "../jotai";
@@ -60,9 +59,11 @@ import "./Toolbar.scss";
 import { mutateElement } from "../element/mutateElement";
 import { ShapeCache } from "../scene/ShapeCache";
 import Scene from "../scene/Scene";
-import { LaserPointerButton } from "./LaserTool/LaserPointerButton";
+import { LaserPointerButton } from "./LaserPointerButton";
 import { MagicSettings } from "./MagicSettings";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
+import { Stats } from "./Stats";
+import { actionToggleStats } from "../actions";
 
 interface LayerUIProps {
   actionManager: ActionManager;
@@ -195,6 +196,7 @@ const LayerUI = ({
         actionManager={actionManager}
         onExportImage={onExportImage}
         onCloseRequest={() => setAppState({ openDialog: null })}
+        name={app.getName()}
       />
     );
   };
@@ -226,7 +228,7 @@ const LayerUI = ({
       >
         <SelectedShapeActions
           appState={appState}
-          elements={elements}
+          elementsMap={app.scene.getNonDeletedElementsMap()}
           renderAction={actionManager.renderAction}
         />
       </Island>
@@ -238,6 +240,11 @@ const LayerUI = ({
       appState,
       elements,
     );
+
+    const shouldShowStats =
+      appState.stats.open &&
+      !appState.zenModeEnabled &&
+      !appState.viewModeEnabled;
 
     return (
       <FixedSideContainer side="top">
@@ -351,6 +358,15 @@ const LayerUI = ({
                 appState.openSidebar?.name !== DEFAULT_SIDEBAR.name) && (
                 <tunnels.DefaultSidebarTriggerTunnel.Out />
               )}
+            {shouldShowStats && (
+              <Stats
+                app={app}
+                onClose={() => {
+                  actionManager.executeAction(actionToggleStats);
+                }}
+                renderCustomStats={renderCustomStats}
+              />
+            )}
           </div>
         </div>
       </FixedSideContainer>
@@ -442,7 +458,7 @@ const LayerUI = ({
                 );
                 ShapeCache.delete(element);
               }
-              Scene.getScene(selectedElements[0])?.informMutation();
+              Scene.getScene(selectedElements[0])?.triggerUpdate();
             } else if (colorPickerType === "elementBackground") {
               setAppState({
                 currentItemBackgroundColor: color,
@@ -540,19 +556,9 @@ const LayerUI = ({
               showExitZenModeBtn={showExitZenModeBtn}
               renderWelcomeScreen={renderWelcomeScreen}
             />
-            {appState.showStats && (
-              <Stats
-                appState={appState}
-                setAppState={setAppState}
-                elements={elements}
-                onClose={() => {
-                  actionManager.executeAction(actionToggleStats);
-                }}
-                renderCustomStats={renderCustomStats}
-              />
-            )}
             {appState.scrolledOutside && (
               <button
+                type="button"
                 className="scroll-back-to-content"
                 onClick={() => {
                   setAppState((appState) => ({

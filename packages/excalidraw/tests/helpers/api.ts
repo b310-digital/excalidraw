@@ -1,4 +1,4 @@
-import {
+import type {
   ExcalidrawElement,
   ExcalidrawGenericElement,
   ExcalidrawTextElement,
@@ -13,12 +13,13 @@ import {
 import { newElement, newTextElement, newLinearElement } from "../../element";
 import { DEFAULT_VERTICAL_ALIGN, ROUNDNESS } from "../../constants";
 import { getDefaultAppState } from "../../appState";
-import { GlobalTestState, createEvent, fireEvent } from "../test-utils";
+import { GlobalTestState, createEvent, fireEvent, act } from "../test-utils";
 import fs from "fs";
 import util from "util";
 import path from "path";
 import { getMimeType } from "../../data/blob";
 import {
+  newArrowElement,
   newEmbeddableElement,
   newFrameElement,
   newFreeDrawElement,
@@ -26,23 +27,59 @@ import {
   newImageElement,
   newMagicFrameElement,
 } from "../../element/newElement";
-import { Point } from "../../types";
+import type { AppState, Point } from "../../types";
 import { getSelectedElements } from "../../scene/selection";
 import { isLinearElementType } from "../../element/typeChecks";
-import { Mutable } from "../../utility-types";
+import type { Mutable } from "../../utility-types";
 import { assertNever } from "../../utils";
+import type App from "../../components/App";
+import { createTestHook } from "../../components/App";
+import type { Action } from "../../actions/types";
+import { mutateElement } from "../../element/mutateElement";
 
 const readFile = util.promisify(fs.readFile);
+// so that window.h is available when App.tsx is not imported as well.
+createTestHook();
 
 const { h } = window;
 
 export class API {
+  static updateScene: InstanceType<typeof App>["updateScene"] = (...args) => {
+    act(() => {
+      h.app.updateScene(...args);
+    });
+  };
+  static setAppState: React.Component<any, AppState>["setState"] = (
+    state,
+    cb,
+  ) => {
+    act(() => {
+      h.setState(state, cb);
+    });
+  };
+
+  static setElements = (elements: readonly ExcalidrawElement[]) => {
+    act(() => {
+      h.elements = elements;
+    });
+  };
+
   static setSelectedElements = (elements: ExcalidrawElement[]) => {
-    h.setState({
-      selectedElementIds: elements.reduce((acc, element) => {
-        acc[element.id] = true;
-        return acc;
-      }, {} as Record<ExcalidrawElement["id"], true>),
+    act(() => {
+      h.setState({
+        selectedElementIds: elements.reduce((acc, element) => {
+          acc[element.id] = true;
+          return acc;
+        }, {} as Record<ExcalidrawElement["id"], true>),
+      });
+    });
+  };
+
+  static updateElement = (
+    ...[element, updates]: Parameters<typeof mutateElement>
+  ) => {
+    act(() => {
+      mutateElement(element, updates);
     });
   };
 
@@ -66,14 +103,25 @@ export class API {
     return selectedElements[0];
   };
 
-  static getStateHistory = () => {
+  static getUndoStack = () => {
     // @ts-ignore
-    return h.history.stateHistory;
+    return h.history.undoStack;
+  };
+
+  static getRedoStack = () => {
+    // @ts-ignore
+    return h.history.redoStack;
+  };
+
+  static getSnapshot = () => {
+    return Array.from(h.store.snapshot.elements.values());
   };
 
   static clearSelection = () => {
-    // @ts-ignore
-    h.app.clearSelection(null);
+    act(() => {
+      // @ts-ignore
+      h.app.clearSelection(null);
+    });
     expect(API.getSelectedElements().length).toBe(0);
   };
 
@@ -100,6 +148,7 @@ export class API {
     id?: string;
     isDeleted?: boolean;
     frameId?: ExcalidrawElement["id"] | null;
+    index?: ExcalidrawElement["index"];
     groupIds?: string[];
     // generic element props
     strokeColor?: ExcalidrawGenericElement["strokeColor"];
@@ -133,6 +182,7 @@ export class API {
     endBinding?: T extends "arrow"
       ? ExcalidrawLinearElement["endBinding"]
       : never;
+    elbowed?: boolean;
   }): T extends "arrow" | "line"
     ? ExcalidrawLinearElement
     : T extends "freedraw"
@@ -167,6 +217,7 @@ export class API {
       x,
       y,
       frameId: rest.frameId ?? null,
+      index: rest.index ?? null,
       angle: rest.angle ?? 0,
       strokeColor: rest.strokeColor ?? appState.currentItemStrokeColor,
       backgroundColor:
@@ -205,7 +256,6 @@ export class API {
         element = newEmbeddableElement({
           type: "embeddable",
           ...base,
-          validated: null,
         });
         break;
       case "iframe":
@@ -237,14 +287,24 @@ export class API {
         });
         break;
       case "arrow":
+        element = newArrowElement({
+          ...base,
+          width,
+          height,
+          type,
+          points: rest.points ?? [
+            [0, 0],
+            [100, 100],
+          ],
+          elbowed: rest.elbowed ?? false,
+        });
+        break;
       case "line":
         element = newLinearElement({
           ...base,
           width,
           height,
           type,
-          startArrowhead: null,
-          endArrowhead: null,
           points: rest.points ?? [
             [0, 0],
             [100, 100],
@@ -336,6 +396,12 @@ export class API {
         },
       },
     });
-    fireEvent(GlobalTestState.interactiveCanvas, fileDropEvent);
+    await fireEvent(GlobalTestState.interactiveCanvas, fileDropEvent);
+  };
+
+  static executeAction = (action: Action) => {
+    act(() => {
+      h.app.actionManager.executeAction(action);
+    });
   };
 }

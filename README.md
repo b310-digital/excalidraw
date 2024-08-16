@@ -33,10 +33,10 @@ Hint: Collab mode requires a secure context (https). Localhost works as well, bu
 docker-compose -f docker-compose-prod.yml up -d
 ```
 
-
 ## Additional licence
 
 The excalidraw [logo](https://thenounproject.com/icon/2357486/) in this repo – created by [Verry](https://thenounproject.com/verry.dsign.creative) – is licenced under [CC BY 3.0 Unported](https://creativecommons.org/licenses/by/3.0/).
+
 <div align="center" style="display:flex;flex-direction:column;"}>
   <a href="https://excalidraw.com">
     <img width="540" src="./public/og-image-sm.png" alt="Excalidraw logo: Sketch handrawn like diagrams."/>
@@ -169,4 +169,7 @@ Visit our documentation on [https://docs.excalidraw.com](https://docs.excalidraw
 ## Who's integrating Excalidraw
 
 [Google Cloud](https://googlecloudcheatsheet.withgoogle.com/architecture) • [Meta](https://meta.com/) • [CodeSandbox](https://codesandbox.io/) • [Obsidian Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin) • [Replit](https://replit.com/) • [Slite](https://slite.com/) • [Notion](https://notion.so/) • [HackerRank](https://www.hackerrank.com/)
+
+```
+
 ```

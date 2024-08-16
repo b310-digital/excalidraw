@@ -1,60 +1,82 @@
 import { register } from "./register";
 import { getSelectedElements } from "../scene";
 import { getNonDeletedElements } from "../element";
-import { ExcalidrawElement, NonDeleted } from "../element/types";
+import type {
+  ExcalidrawElement,
+  NonDeleted,
+  NonDeletedSceneElementsMap,
+} from "../element/types";
 import { resizeMultipleElements } from "../element/resizeElements";
-import { AppState, PointerDownState } from "../types";
+import type { AppClassProperties, AppState } from "../types";
 import { arrayToMap } from "../utils";
 import { CODES, KEYS } from "../keys";
 import { getCommonBoundingBox } from "../element/bounds";
 import {
-  bindOrUnbindSelectedElements,
+  bindOrUnbindLinearElements,
   isBindingEnabled,
-  unbindLinearElements,
 } from "../element/binding";
 import { updateFrameMembershipOfSelectedElements } from "../frame";
+import { flipHorizontal, flipVertical } from "../components/icons";
+import { StoreAction } from "../store";
+import { isLinearElement } from "../element/typeChecks";
 
 export const actionFlipHorizontal = register({
   name: "flipHorizontal",
+  label: "labels.flipHorizontal",
+  icon: flipHorizontal,
   trackEvent: { category: "element" },
   perform: (elements, appState, _, app) => {
     return {
       elements: updateFrameMembershipOfSelectedElements(
-        flipSelectedElements(elements, appState, "horizontal"),
+        flipSelectedElements(
+          elements,
+          app.scene.getNonDeletedElementsMap(),
+          appState,
+          "horizontal",
+          app,
+        ),
         appState,
         app,
       ),
       appState,
-      commitToHistory: true,
+      storeAction: StoreAction.CAPTURE,
     };
   },
   keyTest: (event) => event.shiftKey && event.code === CODES.H,
-  contextItemLabel: "labels.flipHorizontal",
 });
 
 export const actionFlipVertical = register({
   name: "flipVertical",
+  label: "labels.flipVertical",
+  icon: flipVertical,
   trackEvent: { category: "element" },
   perform: (elements, appState, _, app) => {
     return {
       elements: updateFrameMembershipOfSelectedElements(
-        flipSelectedElements(elements, appState, "vertical"),
+        flipSelectedElements(
+          elements,
+          app.scene.getNonDeletedElementsMap(),
+          appState,
+          "vertical",
+          app,
+        ),
         appState,
         app,
       ),
       appState,
-      commitToHistory: true,
+      storeAction: StoreAction.CAPTURE,
     };
   },
   keyTest: (event) =>
     event.shiftKey && event.code === CODES.V && !event[KEYS.CTRL_OR_CMD],
-  contextItemLabel: "labels.flipVertical",
 });
 
 const flipSelectedElements = (
   elements: readonly ExcalidrawElement[],
+  elementsMap: NonDeletedSceneElementsMap,
   appState: Readonly<AppState>,
   flipDirection: "horizontal" | "vertical",
+  app: AppClassProperties,
 ) => {
   const selectedElements = getSelectedElements(
     getNonDeletedElements(elements),
@@ -67,8 +89,10 @@ const flipSelectedElements = (
 
   const updatedElements = flipElements(
     selectedElements,
+    elementsMap,
     appState,
     flipDirection,
+    app,
   );
 
   const updatedElementsMap = arrayToMap(updatedElements);
@@ -79,24 +103,33 @@ const flipSelectedElements = (
 };
 
 const flipElements = (
-  elements: NonDeleted<ExcalidrawElement>[],
+  selectedElements: NonDeleted<ExcalidrawElement>[],
+  elementsMap: NonDeletedSceneElementsMap,
   appState: AppState,
   flipDirection: "horizontal" | "vertical",
+  app: AppClassProperties,
 ): ExcalidrawElement[] => {
-  const { minX, minY, maxX, maxY } = getCommonBoundingBox(elements);
+  const { minX, minY, maxX, maxY } = getCommonBoundingBox(selectedElements);
 
   resizeMultipleElements(
-    { originalElements: arrayToMap(elements) } as PointerDownState,
-    elements,
+    elementsMap,
+    selectedElements,
+    elementsMap,
     "nw",
+    true,
     true,
     flipDirection === "horizontal" ? maxX : minX,
     flipDirection === "horizontal" ? minY : maxY,
   );
 
-  (isBindingEnabled(appState)
-    ? bindOrUnbindSelectedElements
-    : unbindLinearElements)(elements);
+  bindOrUnbindLinearElements(
+    selectedElements.filter(isLinearElement),
+    elementsMap,
+    app.scene.getNonDeletedElements(),
+    app.scene,
+    isBindingEnabled(appState),
+    [],
+  );
 
-  return elements;
+  return selectedElements;
 };

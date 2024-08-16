@@ -20,7 +20,7 @@ services:
 
   excalidraw-storage-backend:
     stdin_open: true
-    build: 
+    build:
       context: https://github.com/kitsteam/excalidraw-storage-backend.git#main
       target: production
     ports:
@@ -33,7 +33,7 @@ services:
     image: excalidraw/excalidraw-room
     ports:
       - "5001:80"
-  
+
   redis:
     image: redis
     command: redis-server --requirepass ${REDIS_PASSWORD}

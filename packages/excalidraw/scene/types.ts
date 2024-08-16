@@ -1,15 +1,27 @@
 import type { RoughCanvas } from "roughjs/bin/canvas";
-import { Drawable } from "roughjs/bin/core";
-import {
-  ExcalidrawTextElement,
+import type { Drawable } from "roughjs/bin/core";
+import type {
+  ExcalidrawElement,
+  NonDeletedElementsMap,
   NonDeletedExcalidrawElement,
+  NonDeletedSceneElementsMap,
 } from "../element/types";
-import {
+import type {
   AppClassProperties,
   AppState,
+  EmbedsValidationStatus,
+  ElementsPendingErasure,
   InteractiveCanvasAppState,
   StaticCanvasAppState,
+  SocketId,
+  UserIdleState,
+  Device,
+  PendingExcalidrawElements,
 } from "../types";
+import type { MakeBrand } from "../utility-types";
+
+export type RenderableElementsMap = NonDeletedElementsMap &
+  MakeBrand<"RenderableElementsMap">;
 
 export type StaticCanvasRenderConfig = {
   canvasBackgroundColor: AppState["viewBackgroundColor"];
@@ -20,6 +32,9 @@ export type StaticCanvasRenderConfig = {
   /** when exporting the behavior is slightly different (e.g. we can't use
    CSS filters), and we disable render optimizations for best output */
   isExporting: boolean;
+  embedsValidationStatus: EmbedsValidationStatus;
+  elementsPendingErasure: ElementsPendingErasure;
+  pendingFlowchartNodes: PendingExcalidrawElements | null;
 };
 
 export type SVGRenderConfig = {
@@ -30,17 +45,18 @@ export type SVGRenderConfig = {
   renderEmbeddables: boolean;
   frameRendering: AppState["frameRendering"];
   canvasBackgroundColor: AppState["viewBackgroundColor"];
+  embedsValidationStatus: EmbedsValidationStatus;
 };
 
 export type InteractiveCanvasRenderConfig = {
   // collab-related state
   // ---------------------------------------------------------------------------
-  remoteSelectedElementIds: { [elementId: string]: string[] };
-  remotePointerViewportCoords: { [id: string]: { x: number; y: number } };
-  remotePointerUserStates: { [id: string]: string };
-  remotePointerUsernames: { [id: string]: string };
-  remotePointerButton?: { [id: string]: string | undefined };
-  selectionColor?: string;
+  remoteSelectedElementIds: Map<ExcalidrawElement["id"], SocketId[]>;
+  remotePointerViewportCoords: Map<SocketId, { x: number; y: number }>;
+  remotePointerUserStates: Map<SocketId, UserIdleState>;
+  remotePointerUsernames: Map<SocketId, string>;
+  remotePointerButton: Map<SocketId, string | undefined>;
+  selectionColor: string;
   // extra options passed to the renderer
   // ---------------------------------------------------------------------------
   renderScrollbars?: boolean;
@@ -48,14 +64,15 @@ export type InteractiveCanvasRenderConfig = {
 
 export type RenderInteractiveSceneCallback = {
   atLeastOneVisibleElement: boolean;
-  elements: readonly NonDeletedExcalidrawElement[];
+  elementsMap: RenderableElementsMap;
   scrollBars?: ScrollBars;
 };
 
 export type StaticSceneRenderConfig = {
   canvas: HTMLCanvasElement;
   rc: RoughCanvas;
-  elements: readonly NonDeletedExcalidrawElement[];
+  elementsMap: RenderableElementsMap;
+  allElementsMap: NonDeletedSceneElementsMap;
   visibleElements: readonly NonDeletedExcalidrawElement[];
   scale: number;
   appState: StaticCanvasAppState;
@@ -64,12 +81,14 @@ export type StaticSceneRenderConfig = {
 
 export type InteractiveSceneRenderConfig = {
   canvas: HTMLCanvasElement | null;
-  elements: readonly NonDeletedExcalidrawElement[];
+  elementsMap: RenderableElementsMap;
   visibleElements: readonly NonDeletedExcalidrawElement[];
   selectedElements: readonly NonDeletedExcalidrawElement[];
+  allElementsMap: NonDeletedSceneElementsMap;
   scale: number;
   appState: InteractiveCanvasAppState;
   renderConfig: InteractiveCanvasRenderConfig;
+  device: Device;
   callback: (data: RenderInteractiveSceneCallback) => void;
 };
 
@@ -77,10 +96,6 @@ export type SceneScroll = {
   scrollX: number;
   scrollY: number;
 };
-
-export interface Scene {
-  elements: ExcalidrawTextElement[];
-}
 
 export type ExportType =
   | "png"

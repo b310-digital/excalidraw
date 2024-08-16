@@ -1,34 +1,42 @@
 // Inspired and partly copied from https://gitlab.com/kiliandeca/excalidraw-fork
 // MIT, Kilian Decaderincourt
 
-import { getSyncableElements, SyncableExcalidrawElement } from ".";
+import type { SyncableExcalidrawElement } from ".";
+import { getSyncableElements } from ".";
 import { MIME_TYPES } from "../../packages/excalidraw/constants";
 import { decompressData } from "../../packages/excalidraw/data/encode";
-import { encryptData, decryptData, IV_LENGTH_BYTES } from "../../packages/excalidraw/data/encryption";
+import {
+  encryptData,
+  decryptData,
+  IV_LENGTH_BYTES,
+} from "../../packages/excalidraw/data/encryption";
 import { restoreElements } from "../../packages/excalidraw/data/restore";
 import { getSceneVersion } from "../../packages/excalidraw/element";
-import { ExcalidrawElement, FileId } from "../../packages/excalidraw/element/types";
-import {
+import type {
+  ExcalidrawElement,
+  FileId,
+  OrderedExcalidrawElement,
+} from "../../packages/excalidraw/element/types";
+import type {
   AppState,
   BinaryFileData,
   BinaryFileMetadata,
   DataURL,
 } from "../../packages/excalidraw/types";
-import Portal from "../collab/Portal";
-import { reconcileElements } from "../collab/reconciliation";
-import { StoredScene } from "./StorageBackend";
+import type Portal from "../collab/Portal";
+import type { RemoteExcalidrawElement } from "../../packages/excalidraw/data/reconcile";
+import { reconcileElements } from "../../packages/excalidraw/data/reconcile";
+import type { StoredScene } from "./StorageBackend";
 import type { Socket } from "socket.io-client";
 
-const HTTP_STORAGE_BACKEND_URL = import.meta.env.VITE_APP_HTTP_STORAGE_BACKEND_URL;
-const SCENE_VERSION_LENGTH_BYTES = 4
+const HTTP_STORAGE_BACKEND_URL = import.meta.env
+  .VITE_APP_HTTP_STORAGE_BACKEND_URL;
+const SCENE_VERSION_LENGTH_BYTES = 4;
 
 // There is a lot of intentional duplication with the firebase file
 // to prevent modifying upstream files and ease futur maintenance of this fork
 
-const httpStorageSceneVersionCache = new WeakMap<
-  Socket,
-  number
->();
+const httpStorageSceneVersionCache = new WeakMap<Socket, number>();
 
 export const isSavedToHttpStorage = (
   portal: Portal,
@@ -68,17 +76,20 @@ export const saveToHttpStorage = async (
 
   if (!getResponse.ok && getResponse.status !== 404) {
     return false;
-  };
+  }
 
-  if(getResponse.status === 404) {
-    const result: boolean = await saveElementsToBackend(roomKey, roomId, [...elements], sceneVersion)
-    if(result) {
-      return {
-        reconciledElements: null
-      }
+  if (getResponse.status === 404) {
+    const result: boolean = await saveElementsToBackend(
+      roomKey,
+      roomId,
+      [...elements],
+      sceneVersion,
+    );
+    if (result) {
+      return null;
     }
-    return false
-  };
+    return false;
+  }
 
   // If room already exist, we compare scene versions to check
   // if we're up to date before saving our scene
@@ -90,16 +101,23 @@ export const saveToHttpStorage = async (
 
   const existingElements = await getElementsFromBuffer(buffer, roomKey);
   const reconciledElements = getSyncableElements(
-    reconcileElements(elements, existingElements, appState),
+    reconcileElements(
+      elements,
+      existingElements as OrderedExcalidrawElement[] as RemoteExcalidrawElement[],
+      appState,
+    ),
   );
 
-  const result: boolean = await saveElementsToBackend(roomKey, roomId, reconciledElements, sceneVersion)
+  const result: boolean = await saveElementsToBackend(
+    roomKey,
+    roomId,
+    reconciledElements,
+    sceneVersion,
+  );
 
   if (result) {
     httpStorageSceneVersionCache.set(socket, sceneVersion);
-    return {
-      reconciledElements: elements
-    };
+    return elements;
   }
   return false;
 };
@@ -109,7 +127,8 @@ export const loadFromHttpStorage = async (
   roomKey: string,
   socket: Socket | null,
 ): Promise<readonly ExcalidrawElement[] | null> => {
-  const HTTP_STORAGE_BACKEND_URL = import.meta.env.VITE_APP_HTTP_STORAGE_BACKEND_URL;
+  const HTTP_STORAGE_BACKEND_URL = import.meta.env
+    .VITE_APP_HTTP_STORAGE_BACKEND_URL;
   const getResponse = await fetch(
     `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
   );
@@ -130,12 +149,20 @@ const getElementsFromBuffer = async (
 ): Promise<readonly ExcalidrawElement[]> => {
   // Buffer should contain both the IV (fixed length) and encrypted data
   const sceneVersion = parseSceneVersionFromRequest(buffer);
-  const iv = new Uint8Array(buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES));
-  const encrypted = buffer.slice(IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES, buffer.byteLength);
+  const iv = new Uint8Array(
+    buffer.slice(
+      SCENE_VERSION_LENGTH_BYTES,
+      IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES,
+    ),
+  );
+  const encrypted = buffer.slice(
+    IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES,
+    buffer.byteLength,
+  );
 
   return await decryptElements(
-    { sceneVersion: sceneVersion, ciphertext: encrypted, iv },
-    key
+    { sceneVersion, ciphertext: encrypted, iv },
+    key,
   );
 };
 
@@ -149,7 +176,8 @@ export const saveFilesToHttpStorage = async ({
   const erroredFiles = new Map<FileId, true>();
   const savedFiles = new Map<FileId, true>();
 
-  const HTTP_STORAGE_BACKEND_URL = import.meta.env.VITE_APP_HTTP_STORAGE_BACKEND_URL;
+  const HTTP_STORAGE_BACKEND_URL = import.meta.env
+    .VITE_APP_HTTP_STORAGE_BACKEND_URL;
 
   await Promise.all(
     files.map(async ({ id, buffer }) => {
@@ -182,7 +210,8 @@ export const loadFilesFromHttpStorage = async (
   await Promise.all(
     [...new Set(filesIds)].map(async (id) => {
       try {
-        const HTTP_STORAGE_BACKEND_URL = import.meta.env.VITE_APP_HTTP_STORAGE_BACKEND_URL;
+        const HTTP_STORAGE_BACKEND_URL = import.meta.env
+          .VITE_APP_HTTP_STORAGE_BACKEND_URL;
         const response = await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`);
         if (response.status < 400) {
           const arrayBuffer = await response.arrayBuffer();
@@ -216,7 +245,12 @@ export const loadFilesFromHttpStorage = async (
   return { loadedFiles, erroredFiles };
 };
 
-const saveElementsToBackend = async (roomKey: string, roomId: string, elements: SyncableExcalidrawElement[], sceneVersion: number) => {
+const saveElementsToBackend = async (
+  roomKey: string,
+  roomId: string,
+  elements: SyncableExcalidrawElement[],
+  sceneVersion: number,
+) => {
   const { ciphertext, iv } = await encryptElements(roomKey, elements);
 
   // Concatenate Scene Version, IV with encrypted data (IV does not have to be secret).
@@ -224,7 +258,9 @@ const saveElementsToBackend = async (roomKey: string, roomId: string, elements: 
   const numberView = new DataView(numberBuffer);
   numberView.setUint32(0, sceneVersion, false);
   const sceneVersionBuffer = numberView.buffer;
-  const payloadBlob = await new Response(new Blob([sceneVersionBuffer, iv.buffer, ciphertext])).arrayBuffer();
+  const payloadBlob = await new Response(
+    new Blob([sceneVersionBuffer, iv.buffer, ciphertext]),
+  ).arrayBuffer();
   const putResponse = await fetch(
     `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
     {
@@ -233,13 +269,13 @@ const saveElementsToBackend = async (roomKey: string, roomId: string, elements: 
     },
   );
 
-  return putResponse.ok
-}
+  return putResponse.ok;
+};
 
 const parseSceneVersionFromRequest = (buffer: ArrayBuffer) => {
   const view = new DataView(buffer);
   return view.getUint32(0, false);
-}
+};
 
 const decryptElements = async (
   data: StoredScene,
