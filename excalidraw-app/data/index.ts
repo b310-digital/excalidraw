@@ -304,6 +304,8 @@ export const exportToBackend = async (
       maxBytes: FILE_UPLOAD_MAX_BYTES,
     });
 
+    const get = await fetch(BACKEND_V2_GET);
+
     const response = await fetch(BACKEND_V2_POST, {
       method: "POST",
       body: payload.buffer,

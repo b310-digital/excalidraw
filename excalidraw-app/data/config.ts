@@ -45,7 +45,6 @@ export async function getStorageBackend() {
 
   if (storageBackends.has(storageBackendName)) {
     storageBackend = storageBackends.get(storageBackendName) as StorageBackend;
-    console.log("Using storage backend: ", storageBackend)
   } else {
     console.warn("No storage backend found, default to firebase");
     storageBackend = firebaseStorage;

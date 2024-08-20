@@ -479,14 +479,12 @@ class Collab extends PureComponent<CollabProps, CollabState> {
         roomLinkData: existingRoomLinkData,
         fetchScene: true,
       }).then((scene) => {
-        console.log("Scene in initRoom: ", scene)
         scenePromise.resolve(scene);
       });
     };
     this.fallbackInitializationHandler = fallbackInitializationHandler;
 
     try {
-      console.log(import.meta.env)
       this.portal.socket = this.portal.open(
         socketIOClient(import.meta.env.VITE_APP_WS_SERVER_URL, {
           transports: ["websocket", "polling"],
