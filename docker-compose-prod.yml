@@ -23,7 +23,7 @@ services:
       - "5011:8080"
     restart: always
     environment:
-      STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-excalidraw-prod}
 
   excalidraw-room:
     image: excalidraw/excalidraw-room
