@@ -19,7 +19,7 @@ services:
       - ./:/opt/node_app/
 
   excalidraw-storage-backend:
-    build: 
+    build:
       context: https://github.com/kitsteam/excalidraw-storage-backend.git#main
       target: production
     stdin_open: true

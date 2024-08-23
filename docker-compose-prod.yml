@@ -30,7 +30,7 @@ services:
     restart: always
     ports:
       - "5012:80"
-  
+
   postgres:
     image: postgres:15-alpine
     # Pass config parameters to the postgres server.
