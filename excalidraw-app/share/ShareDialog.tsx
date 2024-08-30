@@ -140,7 +140,7 @@ const ActiveRoomDialog = ({
             onCopy();
           }}
         />
-      </div >
+      </div>
       <div className="ShareDialog__active__description">
         <p>
           <span

@@ -148,39 +148,39 @@ export const SelectedShapeActions = ({
 
       {(hasStrokeStyle(appState.activeTool.type) ||
         targetElements.some((element) => hasStrokeStyle(element.type))) && (
-          <>
-            {renderAction("changeStrokeStyle")}
-            {renderAction("changeSloppiness")}
-          </>
-        )}
+        <>
+          {renderAction("changeStrokeStyle")}
+          {renderAction("changeSloppiness")}
+        </>
+      )}
 
       {(canChangeRoundness(appState.activeTool.type) ||
         targetElements.some((element) => canChangeRoundness(element.type))) && (
-          <>{renderAction("changeRoundness")}</>
-        )}
+        <>{renderAction("changeRoundness")}</>
+      )}
 
       {(toolIsArrow(appState.activeTool.type) ||
         targetElements.some((element) => toolIsArrow(element.type))) && (
-          <>{renderAction("changeArrowType")}</>
-        )}
+        <>{renderAction("changeArrowType")}</>
+      )}
 
       {(appState.activeTool.type === "text" ||
         targetElements.some(isTextElement)) && (
-          <>
-            {renderAction("changeFontFamily")}
-            {renderAction("changeFontSize")}
-            {(appState.activeTool.type === "text" ||
-              suppportsHorizontalAlign(targetElements, elementsMap)) &&
-              renderAction("changeTextAlign")}
-          </>
-        )}
+        <>
+          {renderAction("changeFontFamily")}
+          {renderAction("changeFontSize")}
+          {(appState.activeTool.type === "text" ||
+            suppportsHorizontalAlign(targetElements, elementsMap)) &&
+            renderAction("changeTextAlign")}
+        </>
+      )}
 
       {shouldAllowVerticalAlign(targetElements, elementsMap) &&
         renderAction("changeVerticalAlign")}
       {(canHaveArrowheads(appState.activeTool.type) ||
         targetElements.some((element) => canHaveArrowheads(element.type))) && (
-          <>{renderAction("changeArrowhead")}</>
-        )}
+        <>{renderAction("changeArrowhead")}</>
+      )}
 
       {renderAction("changeOpacity")}
 
@@ -277,7 +277,7 @@ export const ShapesSwitcher = ({
       {SHAPES.map(({ value, icon, key, numericKey, fillable }, index) => {
         if (
           UIOptions.tools?.[
-          value as Extract<typeof value, keyof AppProps["UIOptions"]["tools"]>
+            value as Extract<typeof value, keyof AppProps["UIOptions"]["tools"]>
           ] === false
         ) {
           return null;

@@ -807,9 +807,9 @@ export const getResizedElementAbsoluteCoords = (
     const gen = rough.generator();
     const curve = !element.roundness
       ? gen.linearPath(
-        points as [number, number][],
-        generateRoughOptions(element),
-      )
+          points as [number, number][],
+          generateRoughOptions(element),
+        )
       : gen.curve(points as [number, number][], generateRoughOptions(element));
 
     const ops = getCurvePathOps(curve);
@@ -834,9 +834,9 @@ export const getElementPointsCoords = (
   const curve =
     element.roundness == null
       ? gen.linearPath(
-        points as [number, number][],
-        generateRoughOptions(element),
-      )
+          points as [number, number][],
+          generateRoughOptions(element),
+        )
       : gen.curve(points as [number, number][], generateRoughOptions(element));
   const ops = getCurvePathOps(curve);
   const [minX, minY, maxX, maxY] = getMinMaxXYFromCurvePathOps(ops);

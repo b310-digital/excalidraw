@@ -400,7 +400,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
           !element.isDeleted &&
           (opts.forceFetchFiles
             ? element.status !== "pending" ||
-            Date.now() - element.updated > 10000
+              Date.now() - element.updated > 10000
             : element.status === "saved")
         );
       })
@@ -666,9 +666,9 @@ class Collab extends PureComponent<CollabProps, CollabState> {
     roomLinkData,
   }:
     | {
-      fetchScene: true;
-      roomLinkData: { roomId: string; roomKey: string } | null;
-    }
+        fetchScene: true;
+        roomLinkData: { roomId: string; roomKey: string } | null;
+      }
     | { fetchScene: false; roomLinkData?: null }) => {
     clearTimeout(this.socketInitializationTimer!);
     if (this.portal.socket && this.fallbackInitializationHandler) {

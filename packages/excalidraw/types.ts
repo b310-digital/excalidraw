@@ -92,9 +92,9 @@ export type DataURL = string & { _brand: "DataURL" };
 
 export type BinaryFileData = {
   mimeType:
-  | ValueOf<typeof IMAGE_MIME_TYPES>
-  // future user or unknown file type
-  | typeof MIME_TYPES.binary;
+    | ValueOf<typeof IMAGE_MIME_TYPES>
+    // future user or unknown file type
+    | typeof MIME_TYPES.binary;
   id: FileId;
   dataURL: DataURL;
   /**
@@ -136,13 +136,13 @@ export type ElementOrToolType = ExcalidrawElementType | ToolType | "custom";
 
 export type ActiveTool =
   | {
-    type: ToolType;
-    customType: null;
-  }
+      type: ToolType;
+      customType: null;
+    }
   | {
-    type: "custom";
-    customType: string;
-  };
+      type: "custom";
+      customType: string;
+    };
 
 export type SidebarName = string;
 export type SidebarTabName = string;
@@ -312,17 +312,17 @@ export interface AppState {
   zoom: Zoom;
   openMenu: "canvas" | "shape" | null;
   openPopup:
-  | "canvasBackground"
-  | "elementBackground"
-  | "elementStroke"
-  | "fontFamily"
-  | null;
+    | "canvasBackground"
+    | "elementBackground"
+    | "elementStroke"
+    | "fontFamily"
+    | null;
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
-  | null
-  | { name: "imageExport" | "help" | "jsonExport" }
-  | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
-  | { name: "commandPalette" };
+    | null
+    | { name: "imageExport" | "help" | "jsonExport" }
+    | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
+    | { name: "commandPalette" };
   /**
    * Reflects user preference for whether the default sidebar should be docked.
    *
@@ -365,14 +365,14 @@ export interface AppState {
   };
   currentChartType: ChartType;
   pasteDialog:
-  | {
-    shown: false;
-    data: null;
-  }
-  | {
-    shown: true;
-    data: Spreadsheet;
-  };
+    | {
+        shown: false;
+        data: null;
+      }
+    | {
+        shown: true;
+        data: Spreadsheet;
+      };
   /** imageElement waiting to be placed on canvas */
   pendingImageElementId: ExcalidrawImageElement["id"] | null;
   showHyperlinkPopup: false | "info" | "editor";
@@ -443,8 +443,8 @@ export type LibraryItems_anyVersion = LibraryItems | LibraryItems_v1;
 
 export type LibraryItemsSource =
   | ((
-    currentLibraryItems: LibraryItems,
-  ) => MaybePromise<LibraryItems_anyVersion | Blob>)
+      currentLibraryItems: LibraryItems,
+    ) => MaybePromise<LibraryItems_anyVersion | Blob>)
   | MaybePromise<LibraryItems_anyVersion | Blob>;
 // -----------------------------------------------------------------------------
 
@@ -467,8 +467,8 @@ export interface ExcalidrawProps {
     files: BinaryFiles,
   ) => void;
   initialData?:
-  | (() => MaybePromise<ExcalidrawInitialDataState | null>)
-  | MaybePromise<ExcalidrawInitialDataState | null>;
+    | (() => MaybePromise<ExcalidrawInitialDataState | null>)
+    | MaybePromise<ExcalidrawInitialDataState | null>;
   excalidrawAPI?: (api: ExcalidrawImperativeAPI) => void;
   isCollaborating?: boolean;
   onPointerUpdate?: (payload: {
@@ -521,11 +521,11 @@ export interface ExcalidrawProps {
   onUserFollow?: (payload: OnUserFollowedPayload) => void;
   children?: React.ReactNode;
   validateEmbeddable?:
-  | boolean
-  | string[]
-  | RegExp
-  | RegExp[]
-  | ((link: string) => boolean | undefined);
+    | boolean
+    | string[]
+    | RegExp
+    | RegExp[]
+    | ((link: string) => boolean | undefined);
   renderEmbeddable?: (
     element: NonDeleted<ExcalidrawEmbeddableElement>,
     appState: AppState,

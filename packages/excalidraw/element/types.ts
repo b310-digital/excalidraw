@@ -102,14 +102,14 @@ export type ExcalidrawEmbeddableElement = _ExcalidrawElementBase &
 
 export type MagicGenerationData =
   | {
-    status: "pending";
-  }
+      status: "pending";
+    }
   | { status: "done"; html: string }
   | {
-    status: "error";
-    message?: string;
-    code: "ERR_GENERATION_INTERRUPTED" | string;
-  };
+      status: "error";
+      message?: string;
+      code: "ERR_GENERATION_INTERRUPTED" | string;
+    };
 
 export type ExcalidrawIframeElement = _ExcalidrawElementBase &
   Readonly<{
@@ -124,13 +124,13 @@ export type ExcalidrawIframeLikeElement =
 
 export type IframeData =
   | {
-    intrinsicSize: { w: number; h: number };
-    error?: Error;
-    sandbox?: { allowSameOrigin?: boolean };
-  } & (
-    | { type: "video" | "generic"; link: string }
-    | { type: "document"; srcdoc: (theme: Theme) => string }
-  );
+      intrinsicSize: { w: number; h: number };
+      error?: Error;
+      sandbox?: { allowSameOrigin?: boolean };
+    } & (
+      | { type: "video" | "generic"; link: string }
+      | { type: "document"; srcdoc: (theme: Theme) => string }
+    );
 
 export type ExcalidrawImageElement = _ExcalidrawElementBase &
   Readonly<{

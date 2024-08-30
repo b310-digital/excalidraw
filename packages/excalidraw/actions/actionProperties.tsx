@@ -195,8 +195,8 @@ const offsetElementAfterFontResize = (
         prevElement.textAlign === "left"
           ? prevElement.x
           : prevElement.x +
-          (prevElement.width - nextElement.width) /
-          (prevElement.textAlign === "center" ? 2 : 1),
+            (prevElement.width - nextElement.width) /
+              (prevElement.textAlign === "center" ? 2 : 1),
       // centering vertically is non-standard, but for Excalidraw I think
       // it makes sense
       y: prevElement.y + (prevElement.height - nextElement.height) / 2,
@@ -269,8 +269,8 @@ export const actionChangeStrokeColor = register({
           (el) => {
             return hasStrokeColor(el.type)
               ? newElementWith(el, {
-                strokeColor: value.currentItemStrokeColor,
-              })
+                  strokeColor: value.currentItemStrokeColor,
+                })
               : el;
           },
           true,
@@ -389,8 +389,9 @@ export const actionChangeFillStyle = register({
           options={[
             {
               value: "hachure",
-              text: `${allElementsZigZag ? t("labels.zigzag") : t("labels.hachure")
-                } (${getShortcutKey("Alt-Click")})`,
+              text: `${
+                allElementsZigZag ? t("labels.zigzag") : t("labels.hachure")
+              } (${getShortcutKey("Alt-Click")})`,
               icon: allElementsZigZag ? FillZigZagIcon : FillHachureIcon,
               active: allElementsZigZag ? true : undefined,
               testId: `fill-hachure`,
@@ -419,8 +420,8 @@ export const actionChangeFillStyle = register({
           onClick={(value, event) => {
             const nextValue =
               event.altKey &&
-                value === "hachure" &&
-                selectedElements.every((el) => el.fillStyle === "hachure")
+              value === "hachure" &&
+              selectedElements.every((el) => el.fillStyle === "hachure")
                 ? "zigzag"
                 : value;
 
@@ -1333,10 +1334,10 @@ export const actionChangeRoundness = register({
           roundness:
             value === "round"
               ? {
-                type: isUsingAdaptiveRadius(el.type)
-                  ? ROUNDNESS.ADAPTIVE_RADIUS
-                  : ROUNDNESS.PROPORTIONAL_RADIUS,
-              }
+                  type: isUsingAdaptiveRadius(el.type)
+                    ? ROUNDNESS.ADAPTIVE_RADIUS
+                    : ROUNDNESS.PROPORTIONAL_RADIUS,
+                }
               : null,
         });
       }),
@@ -1558,8 +1559,8 @@ export const actionChangeArrowType = register({
           roundness:
             value === ARROW_TYPE.round
               ? {
-                type: ROUNDNESS.PROPORTIONAL_RADIUS,
-              }
+                  type: ROUNDNESS.PROPORTIONAL_RADIUS,
+                }
               : null,
           elbowed: value === ARROW_TYPE.elbow,
           points:
@@ -1604,31 +1605,31 @@ export const actionChangeArrowType = register({
           const startElement = startHoveredElement
             ? startHoveredElement
             : newElement.startBinding &&
-            (elementsMap.get(
-              newElement.startBinding.elementId,
-            ) as ExcalidrawBindableElement);
+              (elementsMap.get(
+                newElement.startBinding.elementId,
+              ) as ExcalidrawBindableElement);
           const endElement = endHoveredElement
             ? endHoveredElement
             : newElement.endBinding &&
-            (elementsMap.get(
-              newElement.endBinding.elementId,
-            ) as ExcalidrawBindableElement);
+              (elementsMap.get(
+                newElement.endBinding.elementId,
+              ) as ExcalidrawBindableElement);
 
           const finalStartPoint = startHoveredElement
             ? bindPointToSnapToElementOutline(
-              startGlobalPoint,
-              endGlobalPoint,
-              startHoveredElement,
-              elementsMap,
-            )
+                startGlobalPoint,
+                endGlobalPoint,
+                startHoveredElement,
+                elementsMap,
+              )
             : startGlobalPoint;
           const finalEndPoint = endHoveredElement
             ? bindPointToSnapToElementOutline(
-              endGlobalPoint,
-              startGlobalPoint,
-              endHoveredElement,
-              elementsMap,
-            )
+                endGlobalPoint,
+                startGlobalPoint,
+                endHoveredElement,
+                elementsMap,
+              )
             : endGlobalPoint;
 
           startHoveredElement &&
@@ -1657,31 +1658,31 @@ export const actionChangeArrowType = register({
             {
               ...(startElement && newElement.startBinding
                 ? {
-                  startBinding: {
-                    // @ts-ignore TS cannot discern check above
-                    ...newElement.startBinding!,
-                    ...calculateFixedPointForElbowArrowBinding(
-                      newElement,
-                      startElement,
-                      "start",
-                      elementsMap,
-                    ),
-                  },
-                }
+                    startBinding: {
+                      // @ts-ignore TS cannot discern check above
+                      ...newElement.startBinding!,
+                      ...calculateFixedPointForElbowArrowBinding(
+                        newElement,
+                        startElement,
+                        "start",
+                        elementsMap,
+                      ),
+                    },
+                  }
                 : {}),
               ...(endElement && newElement.endBinding
                 ? {
-                  endBinding: {
-                    // @ts-ignore TS cannot discern check above
-                    ...newElement.endBinding,
-                    ...calculateFixedPointForElbowArrowBinding(
-                      newElement,
-                      endElement,
-                      "end",
-                      elementsMap,
-                    ),
-                  },
-                }
+                    endBinding: {
+                      // @ts-ignore TS cannot discern check above
+                      ...newElement.endBinding,
+                      ...calculateFixedPointForElbowArrowBinding(
+                        newElement,
+                        endElement,
+                        "end",
+                        elementsMap,
+                      ),
+                    },
+                  }
                 : {}),
             },
           );
@@ -1743,8 +1744,8 @@ export const actionChangeArrowType = register({
                 return element.elbowed
                   ? ARROW_TYPE.elbow
                   : element.roundness
-                    ? ARROW_TYPE.round
-                    : ARROW_TYPE.sharp;
+                  ? ARROW_TYPE.round
+                  : ARROW_TYPE.sharp;
               }
 
               return null;

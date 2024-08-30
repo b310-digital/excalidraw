@@ -216,9 +216,9 @@ export const handleBindTextResize = (
       // fix the y coord when resizing from ne/nw/n
       const updatedY =
         !isArrowElement(container) &&
-          (transformHandleType === "ne" ||
-            transformHandleType === "nw" ||
-            transformHandleType === "n")
+        (transformHandleType === "ne" ||
+          transformHandleType === "nw" ||
+          transformHandleType === "n")
           ? container.y - diff
           : container.y;
       mutateElement(container, {

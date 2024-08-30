@@ -36,8 +36,9 @@ export const AppMainMenu: React.FC<{
       <MainMenu.Separator />
       <MainMenu.ItemLink
         icon={ExcalLogo}
-        href={`${import.meta.env.VITE_APP_PLUS_LP
-          }/plus?utm_source=excalidraw&utm_medium=app&utm_content=hamburger`}
+        href={`${
+          import.meta.env.VITE_APP_PLUS_LP
+        }/plus?utm_source=excalidraw&utm_medium=app&utm_content=hamburger`}
         className=""
       >
         Excalidraw+
@@ -45,8 +46,9 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.Socials />
       <MainMenu.ItemLink
         icon={loginIcon}
-        href={`${import.meta.env.VITE_APP_PLUS_APP}${isExcalidrawPlusSignedUser ? "" : "/sign-up"
-          }?utm_source=signin&utm_medium=app&utm_content=hamburger`}
+        href={`${import.meta.env.VITE_APP_PLUS_APP}${
+          isExcalidrawPlusSignedUser ? "" : "/sign-up"
+        }?utm_source=signin&utm_medium=app&utm_content=hamburger`}
         className="highlighted"
       >
         {isExcalidrawPlusSignedUser ? "Sign in" : "Sign up"}
@@ -78,6 +80,6 @@ export const AppMainMenu: React.FC<{
         <LanguageList style={{ width: "100%" }} />
       </MainMenu.ItemCustom>
       <MainMenu.DefaultItems.ChangeCanvasBackground />
-    </MainMenu >
+    </MainMenu>
   );
 });
