@@ -10,7 +10,7 @@ export class HistoryChangedEvent {
   constructor(
     public readonly isUndoStackEmpty: boolean = true,
     public readonly isRedoStackEmpty: boolean = true,
-  ) {}
+  ) { }
 }
 
 export class History {
@@ -161,7 +161,7 @@ export class HistoryEntry {
   private constructor(
     public readonly appStateChange: AppStateChange,
     public readonly elementsChange: ElementsChange,
-  ) {}
+  ) { }
 
   public static create(
     appStateChange: AppStateChange,
