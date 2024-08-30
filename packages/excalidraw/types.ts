@@ -92,9 +92,9 @@ export type DataURL = string & { _brand: "DataURL" };
 
 export type BinaryFileData = {
   mimeType:
-    | ValueOf<typeof IMAGE_MIME_TYPES>
-    // future user or unknown file type
-    | typeof MIME_TYPES.binary;
+  | ValueOf<typeof IMAGE_MIME_TYPES>
+  // future user or unknown file type
+  | typeof MIME_TYPES.binary;
   id: FileId;
   dataURL: DataURL;
   /**
@@ -136,13 +136,13 @@ export type ElementOrToolType = ExcalidrawElementType | ToolType | "custom";
 
 export type ActiveTool =
   | {
-      type: ToolType;
-      customType: null;
-    }
+    type: ToolType;
+    customType: null;
+  }
   | {
-      type: "custom";
-      customType: string;
-    };
+    type: "custom";
+    customType: string;
+  };
 
 export type SidebarName = string;
 export type SidebarTabName = string;
@@ -200,7 +200,7 @@ export type InteractiveCanvasAppState = Readonly<
     // SnapLines
     snapLines: AppState["snapLines"];
     zenModeEnabled: AppState["zenModeEnabled"];
-    editingElement: AppState["editingElement"];
+    editingTextElement: AppState["editingTextElement"];
   }
 >;
 
@@ -268,13 +268,9 @@ export interface AppState {
   editingFrame: string | null;
   elementsToHighlight: NonDeleted<ExcalidrawElement>[] | null;
   /**
-   * currently set for:
-   * - text elements while in wysiwyg
-   * - newly created linear elements while in line editor (not set for existing
-   *   elements in line editor)
-   * - and new images while being placed on canvas
+   * set when a new text is created or when an existing text is being edited
    */
-  editingElement: NonDeletedExcalidrawElement | null;
+  editingTextElement: NonDeletedExcalidrawElement | null;
   editingLinearElement: LinearElementEditor | null;
   activeTool: {
     /**
@@ -316,25 +312,17 @@ export interface AppState {
   zoom: Zoom;
   openMenu: "canvas" | "shape" | null;
   openPopup:
-    | "canvasBackground"
-    | "elementBackground"
-    | "elementStroke"
-    | "fontFamily"
-    | null;
+  | "canvasBackground"
+  | "elementBackground"
+  | "elementStroke"
+  | "fontFamily"
+  | null;
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
-    | null
-    | { name: "imageExport" | "help" | "jsonExport" }
-    | {
-        name: "settings";
-        source:
-          | "tool" // when magicframe tool is selected
-          | "generation" // when magicframe generate button is clicked
-          | "settings"; // when AI settings dialog is explicitly invoked
-        tab: "text-to-diagram" | "diagram-to-code";
-      }
-    | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
-    | { name: "commandPalette" };
+  | null
+  | { name: "imageExport" | "help" | "jsonExport" }
+  | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
+  | { name: "commandPalette" };
   /**
    * Reflects user preference for whether the default sidebar should be docked.
    *
@@ -377,14 +365,14 @@ export interface AppState {
   };
   currentChartType: ChartType;
   pasteDialog:
-    | {
-        shown: false;
-        data: null;
-      }
-    | {
-        shown: true;
-        data: Spreadsheet;
-      };
+  | {
+    shown: false;
+    data: null;
+  }
+  | {
+    shown: true;
+    data: Spreadsheet;
+  };
   /** imageElement waiting to be placed on canvas */
   pendingImageElementId: ExcalidrawImageElement["id"] | null;
   showHyperlinkPopup: false | "info" | "editor";
@@ -455,8 +443,8 @@ export type LibraryItems_anyVersion = LibraryItems | LibraryItems_v1;
 
 export type LibraryItemsSource =
   | ((
-      currentLibraryItems: LibraryItems,
-    ) => MaybePromise<LibraryItems_anyVersion | Blob>)
+    currentLibraryItems: LibraryItems,
+  ) => MaybePromise<LibraryItems_anyVersion | Blob>)
   | MaybePromise<LibraryItems_anyVersion | Blob>;
 // -----------------------------------------------------------------------------
 
@@ -479,8 +467,8 @@ export interface ExcalidrawProps {
     files: BinaryFiles,
   ) => void;
   initialData?:
-    | (() => MaybePromise<ExcalidrawInitialDataState | null>)
-    | MaybePromise<ExcalidrawInitialDataState | null>;
+  | (() => MaybePromise<ExcalidrawInitialDataState | null>)
+  | MaybePromise<ExcalidrawInitialDataState | null>;
   excalidrawAPI?: (api: ExcalidrawImperativeAPI) => void;
   isCollaborating?: boolean;
   onPointerUpdate?: (payload: {
@@ -533,11 +521,11 @@ export interface ExcalidrawProps {
   onUserFollow?: (payload: OnUserFollowedPayload) => void;
   children?: React.ReactNode;
   validateEmbeddable?:
-    | boolean
-    | string[]
-    | RegExp
-    | RegExp[]
-    | ((link: string) => boolean | undefined);
+  | boolean
+  | string[]
+  | RegExp
+  | RegExp[]
+  | ((link: string) => boolean | undefined);
   renderEmbeddable?: (
     element: NonDeleted<ExcalidrawEmbeddableElement>,
     appState: AppState,
@@ -655,6 +643,8 @@ export type AppClassProperties = {
   dismissLinearEditor: App["dismissLinearEditor"];
   flowChartCreator: App["flowChartCreator"];
   getEffectiveGridSize: App["getEffectiveGridSize"];
+  setPlugins: App["setPlugins"];
+  plugins: App["plugins"];
 };
 
 export type PointerDownState = Readonly<{
@@ -842,3 +832,8 @@ export type PendingExcalidrawElements = ExcalidrawElement[];
 export type NullableGridSize =
   | (AppState["gridSize"] & MakeBrand<"NullableGridSize">)
   | null;
+
+export type GenerateDiagramToCode = (props: {
+  frame: ExcalidrawMagicFrameElement;
+  children: readonly ExcalidrawElement[];
+}) => MaybePromise<{ html: string }>;

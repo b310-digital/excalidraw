@@ -168,6 +168,7 @@
     "exportImage": "Export image...",
     "export": "Save to...",
     "copyToClipboard": "Copy to clipboard",
+    "copyLink": "Copy link",
     "save": "Save to current file",
     "saveAs": "Save as",
     "load": "Open",
@@ -272,8 +273,23 @@
     "laser": "Laser pointer",
     "hand": "Hand (panning tool)",
     "extraTools": "More tools",
-    "mermaidToExcalidraw": "Mermaid to Excalidraw",
-    "magicSettings": "AI settings"
+    "mermaidToExcalidraw": "Mermaid to Excalidraw"
+  },
+  "element": {
+    "rectangle": "Rectangle",
+    "diamond": "Diamond",
+    "ellipse": "Ellipse",
+    "arrow": "Arrow",
+    "line": "Line",
+    "freedraw": "Freedraw",
+    "text": "Text",
+    "image": "Image",
+    "group": "Group",
+    "frame": "Frame",
+    "magicframe": "Wireframe to code",
+    "embeddable": "Web Embed",
+    "selection": "Selection",
+    "iframe": "IFrame"
   },
   "element": {
     "rectangle": "Rectangle",

@@ -60,7 +60,6 @@ import { mutateElement } from "../element/mutateElement";
 import { ShapeCache } from "../scene/ShapeCache";
 import Scene from "../scene/Scene";
 import { LaserPointerButton } from "./LaserPointerButton";
-import { MagicSettings } from "./MagicSettings";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
 import { Stats } from "./Stats";
 import { actionToggleStats } from "../actions";
@@ -85,14 +84,6 @@ interface LayerUIProps {
   children?: React.ReactNode;
   app: AppClassProperties;
   isCollaborating: boolean;
-  openAIKey: string | null;
-  isOpenAIKeyPersisted: boolean;
-  onOpenAIAPIKeyChange: (apiKey: string, shouldPersist: boolean) => void;
-  onMagicSettingsConfirm: (
-    apiKey: string,
-    shouldPersist: boolean,
-    source: "tool" | "generation" | "settings",
-  ) => void;
 }
 
 const DefaultMainMenu: React.FC<{
@@ -149,10 +140,6 @@ const LayerUI = ({
   children,
   app,
   isCollaborating,
-  openAIKey,
-  isOpenAIKeyPersisted,
-  onOpenAIAPIKeyChange,
-  onMagicSettingsConfirm,
 }: LayerUIProps) => {
   const device = useDevice();
   const tunnels = useInitializeTunnels();
@@ -451,8 +438,8 @@ const LayerUI = ({
                         ? "strokeColor"
                         : "backgroundColor"
                       : colorPickerType === "elementBackground"
-                      ? "backgroundColor"
-                      : "strokeColor"]: color,
+                        ? "backgroundColor"
+                        : "strokeColor"]: color,
                   },
                   false,
                 );
@@ -477,25 +464,6 @@ const LayerUI = ({
       )}
       {appState.openDialog?.name === "help" && (
         <HelpDialog
-          onClose={() => {
-            setAppState({ openDialog: null });
-          }}
-        />
-      )}
-      {appState.openDialog?.name === "settings" && (
-        <MagicSettings
-          openAIKey={openAIKey}
-          isPersisted={isOpenAIKeyPersisted}
-          onChange={onOpenAIAPIKeyChange}
-          onConfirm={(apiKey, shouldPersist) => {
-            const source =
-              appState.openDialog?.name === "settings"
-                ? appState.openDialog?.source
-                : "settings";
-            setAppState({ openDialog: null }, () => {
-              onMagicSettingsConfirm(apiKey, shouldPersist, source);
-            });
-          }}
           onClose={() => {
             setAppState({ openDialog: null });
           }}
@@ -542,8 +510,8 @@ const LayerUI = ({
             className="layer-ui__wrapper"
             style={
               appState.openSidebar &&
-              isSidebarDocked &&
-              device.editor.canFitSidebar
+                isSidebarDocked &&
+                device.editor.canFitSidebar
                 ? { width: `calc(100% - ${LIBRARY_SIDEBAR_WIDTH}px)` }
                 : {}
             }
