@@ -308,22 +308,6 @@
     "selection": "Selection",
     "iframe": "IFrame"
   },
-  "element": {
-    "rectangle": "Rectangle",
-    "diamond": "Diamond",
-    "ellipse": "Ellipse",
-    "arrow": "Arrow",
-    "line": "Line",
-    "freedraw": "Freedraw",
-    "text": "Text",
-    "image": "Image",
-    "group": "Group",
-    "frame": "Frame",
-    "magicframe": "Wireframe to code",
-    "embeddable": "Web Embed",
-    "selection": "Selection",
-    "iframe": "IFrame"
-  },
   "headings": {
     "canvasActions": "Canvas actions",
     "selectedShapeActions": "Selected shape actions",

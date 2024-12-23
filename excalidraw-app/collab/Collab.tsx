@@ -161,7 +161,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
 
         const storageBackend = await getStorageBackend();
         const { savedFiles, erroredFiles } =
-          storageBackend.saveFilesToStorageBackend({
+          await storageBackend.saveFilesToStorageBackend({
             prefix: `${FIREBASE_STORAGE_PREFIXES.collabFiles}/${roomId}`,
             files: await encodeFilesForUpload({
               files: addedFiles,

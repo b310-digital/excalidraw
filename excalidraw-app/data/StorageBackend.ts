@@ -2,6 +2,7 @@ import type { SyncableExcalidrawElement } from ".";
 import type {
   ExcalidrawElement,
   FileId,
+  OrderedExcalidrawElement,
 } from "../../packages/excalidraw/element/types";
 import type { AppState, BinaryFileData } from "../../packages/excalidraw/types";
 import type Portal from "../collab/Portal";
@@ -18,7 +19,7 @@ export interface StorageBackend {
     roomId: string,
     roomKey: string,
     socket: Socket | null,
-  ) => Promise<readonly ExcalidrawElement[] | null>;
+  ) => Promise<readonly OrderedExcalidrawElement[] | null>;
   saveFilesToStorageBackend: ({
     prefix,
     files,
@@ -29,8 +30,8 @@ export interface StorageBackend {
       buffer: Uint8Array;
     }[];
   }) => Promise<{
-    savedFiles: Map<FileId, true>;
-    erroredFiles: Map<FileId, true>;
+    savedFiles: FileId[];
+    erroredFiles: FileId[];
   }>;
   loadFilesFromStorageBackend: (
     prefix: string,

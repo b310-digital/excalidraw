@@ -71,6 +71,7 @@ export interface AppProps {
   children: React.ReactNode;
   excalidrawLib: typeof TExcalidraw;
 }
+
 export default function ExampleApp({
   appTitle,
   useCustom,
