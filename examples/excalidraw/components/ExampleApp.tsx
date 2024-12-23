@@ -39,12 +39,7 @@ import type {
   Theme,
 } from "@excalidraw/excalidraw/dist/excalidraw/element/types";
 import type { ImportedLibraryData } from "@excalidraw/excalidraw/dist/excalidraw/data/types";
-
-<<<<<<<< HEAD:examples/excalidraw/components/App.tsx
-import "./App.scss";
-========
 import "./ExampleApp.scss";
->>>>>>>> upstream/master:examples/excalidraw/components/ExampleApp.tsx
 
 type Comment = {
   x: number;
@@ -76,12 +71,7 @@ export interface AppProps {
   children: React.ReactNode;
   excalidrawLib: typeof TExcalidraw;
 }
-
-<<<<<<<< HEAD:examples/excalidraw/components/App.tsx
-export default function App({
-========
 export default function ExampleApp({
->>>>>>>> upstream/master:examples/excalidraw/components/ExampleApp.tsx
   appTitle,
   useCustom,
   customArgs,

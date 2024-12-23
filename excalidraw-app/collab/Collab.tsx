@@ -47,11 +47,6 @@ import {
   getCollaborationLink,
   getSyncableElements,
 } from "../data";
-import {
-  generateCollaborationLinkData,
-  getCollaborationLink,
-  getSyncableElements,
-} from "../data";
 import { isSavedToFirebase } from "../data/firebase";
 import {
   importUsernameFromLocalStorage,
@@ -165,14 +160,15 @@ class Collab extends PureComponent<CollabProps, CollabState> {
         }
 
         const storageBackend = await getStorageBackend();
-        const { savedFiles, erroredFiles } = storageBackend.saveFilesToStorageBackend({
-          prefix: `${FIREBASE_STORAGE_PREFIXES.collabFiles}/${roomId}`,
-          files: await encodeFilesForUpload({
-            files: addedFiles,
-            encryptionKey: roomKey,
-            maxBytes: FILE_UPLOAD_MAX_BYTES,
-          }),
-        });
+        const { savedFiles, erroredFiles } =
+          storageBackend.saveFilesToStorageBackend({
+            prefix: `${FIREBASE_STORAGE_PREFIXES.collabFiles}/${roomId}`,
+            files: await encodeFilesForUpload({
+              files: addedFiles,
+              encryptionKey: roomKey,
+              maxBytes: FILE_UPLOAD_MAX_BYTES,
+            }),
+          });
 
         return {
           savedFiles: savedFiles.reduce(

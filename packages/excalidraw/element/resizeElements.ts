@@ -47,7 +47,6 @@ import {
   handleBindTextResize,
   getBoundTextMaxWidth,
   getApproxMinLineHeight,
-  wrapText,
   measureText,
   getMinTextElementWidth,
 } from "./textElement";

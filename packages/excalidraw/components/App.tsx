@@ -1514,8 +1514,6 @@ class App extends React.Component<AppProps, AppState> {
 
     const allElementsMap = this.scene.getNonDeletedElementsMap();
 
-    const allElementsMap = this.scene.getNonDeletedElementsMap();
-
     const shouldBlockPointerEvents =
       this.state.selectionElement ||
       this.state.newElement ||
