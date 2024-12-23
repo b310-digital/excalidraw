@@ -1,8 +1,11 @@
+import Pool from "es6-promise-pool";
+import { average } from "../math";
 import { COLOR_PALETTE } from "./colors";
 import type { EVENT } from "./constants";
 import {
   DEFAULT_VERSION,
   FONT_FAMILY,
+  getFontFamilyFallbacks,
   isDarwin,
   WINDOWS_EMOJI_FALLBACK_FONT,
 } from "./constants";
@@ -88,8 +91,10 @@ export const getFontFamilyString = ({
 }) => {
   for (const [fontFamilyString, id] of Object.entries(FONT_FAMILY)) {
     if (id === fontFamily) {
-      // TODO: we should fallback first to generic family names first, rather than directly to the emoji font
-      return `${fontFamilyString}, ${WINDOWS_EMOJI_FALLBACK_FONT}`;
+      // TODO: we should fallback first to generic family names first
+      return `${fontFamilyString}${getFontFamilyFallbacks(id)
+        .map((x) => `, ${x}`)
+        .join("")}`;
     }
   }
   return WINDOWS_EMOJI_FALLBACK_FONT;
@@ -720,6 +725,9 @@ export const isTestEnv = () => import.meta.env.MODE === "test";
 
 export const isDevEnv = () => import.meta.env.MODE === "development";
 
+export const isServerEnv = () =>
+  typeof process !== "undefined" && !!process?.env?.NODE_ENV;
+
 export const wrapEvent = <T extends Event>(name: EVENT, nativeEvent: T) => {
   return new CustomEvent(name, {
     detail: {
@@ -992,10 +1000,6 @@ export const isMemberOf = <T extends string>(
 
 export const cloneJSON = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
-export const isFiniteNumber = (value: any): value is number => {
-  return typeof value === "number" && Number.isFinite(value);
-};
-
 export const updateStable = <T extends any[] | Record<string, any>>(
   prevValue: T,
   nextValue: T,
@@ -1079,7 +1083,6 @@ export function addEventListener(
   };
 }
 
-const average = (a: number, b: number) => (a + b) / 2;
 export function getSvgPathFromStroke(points: number[][], closed = true) {
   const len = points.length;
 
@@ -1166,3 +1169,59 @@ export const promiseTry = async <TValue, TArgs extends unknown[]>(
 
 export const isAnyTrue = (...args: boolean[]): boolean =>
   Math.max(...args.map((arg) => (arg ? 1 : 0))) > 0;
+
+export const safelyParseJSON = (json: string): Record<string, any> | null => {
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+// extending the missing types
+// relying on the [Index, T] to keep a correct order
+type TPromisePool<T, Index = number> = Pool<[Index, T][]> & {
+  addEventListener: (
+    type: "fulfilled",
+    listener: (event: { data: { result: [Index, T] } }) => void,
+  ) => (event: { data: { result: [Index, T] } }) => void;
+  removeEventListener: (
+    type: "fulfilled",
+    listener: (event: { data: { result: [Index, T] } }) => void,
+  ) => void;
+};
+
+export class PromisePool<T> {
+  private readonly pool: TPromisePool<T>;
+  private readonly entries: Record<number, T> = {};
+
+  constructor(
+    source: IterableIterator<Promise<void | readonly [number, T]>>,
+    concurrency: number,
+  ) {
+    this.pool = new Pool(
+      source as unknown as () => void | PromiseLike<[number, T][]>,
+      concurrency,
+    ) as TPromisePool<T>;
+  }
+
+  public all() {
+    const listener = (event: { data: { result: void | [number, T] } }) => {
+      if (event.data.result) {
+        // by default pool does not return the results, so we are gathering them manually
+        // with the correct call order (represented by the index in the tuple)
+        const [index, value] = event.data.result;
+        this.entries[index] = value;
+      }
+    };
+
+    this.pool.addEventListener("fulfilled", listener);
+
+    return this.pool.start().then(() => {
+      setTimeout(() => {
+        this.pool.removeEventListener("fulfilled", listener);
+      });
+
+      return Object.values(this.entries);
+    });
+  }
+}

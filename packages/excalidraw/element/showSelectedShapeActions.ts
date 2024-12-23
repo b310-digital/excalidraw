@@ -8,8 +8,9 @@ export const showSelectedShapeActions = (
 ) =>
   Boolean(
     !appState.viewModeEnabled &&
+      appState.openDialog?.name !== "elementLinkSelector" &&
       ((appState.activeTool.type !== "custom" &&
-        (appState.editingElement ||
+        (appState.editingTextElement ||
           (appState.activeTool.type !== "selection" &&
             appState.activeTool.type !== "eraser" &&
             appState.activeTool.type !== "hand" &&

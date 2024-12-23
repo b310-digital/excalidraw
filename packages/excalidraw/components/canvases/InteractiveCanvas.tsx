@@ -182,6 +182,7 @@ const getRelevantAppStateProps = (
   width: appState.width,
   height: appState.height,
   viewModeEnabled: appState.viewModeEnabled,
+  openDialog: appState.openDialog,
   editingGroupId: appState.editingGroupId,
   editingLinearElement: appState.editingLinearElement,
   selectedElementIds: appState.selectedElementIds,
@@ -202,7 +203,10 @@ const getRelevantAppStateProps = (
   activeEmbeddable: appState.activeEmbeddable,
   snapLines: appState.snapLines,
   zenModeEnabled: appState.zenModeEnabled,
-  editingElement: appState.editingElement,
+  editingTextElement: appState.editingTextElement,
+  isCropping: appState.isCropping,
+  croppingElementId: appState.croppingElementId,
+  searchMatches: appState.searchMatches,
 });
 
 const areEqual = (

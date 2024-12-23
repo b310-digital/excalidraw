@@ -179,8 +179,8 @@ export const saveFilesToFirebase = async ({
 }) => {
   const firebase = await loadFirebaseStorage();
 
-  const erroredFiles = new Map<FileId, true>();
-  const savedFiles = new Map<FileId, true>();
+  const erroredFiles: FileId[] = [];
+  const savedFiles: FileId[] = [];
 
   await Promise.all(
     files.map(async ({ id, buffer }) => {
@@ -196,9 +196,9 @@ export const saveFilesToFirebase = async ({
               cacheControl: `public, max-age=${FILE_CACHE_MAX_AGE_SEC}`,
             },
           );
-        savedFiles.set(id, true);
+        savedFiles.push(id);
       } catch (error: any) {
-        erroredFiles.set(id, true);
+        erroredFiles.push(id);
       }
     }),
   );

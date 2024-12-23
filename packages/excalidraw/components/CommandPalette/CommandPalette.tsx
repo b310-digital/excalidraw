@@ -43,7 +43,11 @@ import { InlineIcon } from "../InlineIcon";
 import { SHAPES } from "../../shapes";
 import { canChangeBackgroundColor, canChangeStrokeColor } from "../Actions";
 import { useStableCallback } from "../../hooks/useStableCallback";
-import { actionClearCanvas, actionLink } from "../../actions";
+import {
+  actionClearCanvas,
+  actionLink,
+  actionToggleSearchMenu,
+} from "../../actions";
 import { jotaiStore } from "../../jotai";
 import { activeConfirmDialogAtom } from "../ActiveConfirmDialog";
 import type { CommandPaletteItem } from "./types";
@@ -52,6 +56,10 @@ import { trackEvent } from "../../analytics";
 import { useStable } from "../../hooks/useStable";
 
 import "./CommandPalette.scss";
+import {
+  actionCopyElementLink,
+  actionLinkToElement,
+} from "../../actions/actionElementLink";
 
 const lastUsedPaletteItem = atom<CommandPaletteItem | null>(null);
 
@@ -275,7 +283,10 @@ function CommandPaletteInner({
         actionManager.actions.increaseFontSize,
         actionManager.actions.decreaseFontSize,
         actionManager.actions.toggleLinearEditor,
+        actionManager.actions.cropEditor,
         actionLink,
+        actionCopyElementLink,
+        actionLinkToElement,
       ].map((action: Action) =>
         actionToCommand(
           action,
@@ -380,6 +391,15 @@ function CommandPaletteInner({
                 },
               });
             }
+          },
+        },
+        {
+          label: t("search.title"),
+          category: DEFAULT_CATEGORIES.app,
+          icon: searchIcon,
+          viewMode: true,
+          perform: () => {
+            actionManager.executeAction(actionToggleSearchMenu);
           },
         },
         {

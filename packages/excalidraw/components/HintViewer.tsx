@@ -13,6 +13,7 @@ import { isEraserActive } from "../appState";
 import "./HintViewer.scss";
 import { isNodeInFlowchart } from "../element/flowchart";
 import { isGridModeEnabled } from "../snapping";
+import { CANVAS_SEARCH_TAB, DEFAULT_SIDEBAR } from "../constants";
 
 interface HintViewerProps {
   appState: UIAppState;
@@ -29,6 +30,14 @@ const getHints = ({
 }: HintViewerProps): null | string | string[] => {
   const { activeTool, isResizing, isRotating, lastPointerDownWith } = appState;
   const multiMode = appState.multiElement !== null;
+
+  if (
+    appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
+    appState.openSidebar.tab === CANVAS_SEARCH_TAB &&
+    appState.searchMatches?.length
+  ) {
+    return t("hints.dismissSearch");
+  }
 
   if (appState.openSidebar && !device.editor.canFitSidebar) {
     return null;
@@ -87,15 +96,23 @@ const getHints = ({
     return t("hints.text_selected");
   }
 
-  if (appState.editingElement && isTextElement(appState.editingElement)) {
+  if (appState.editingTextElement) {
     return t("hints.text_editing");
+  }
+
+  if (appState.croppingElementId) {
+    return t("hints.leaveCropEditor");
+  }
+
+  if (selectedElements.length === 1 && isImageElement(selectedElements[0])) {
+    return t("hints.enterCropEditor");
   }
 
   if (activeTool.type === "selection") {
     if (
       appState.selectionElement &&
       !selectedElements.length &&
-      !appState.editingElement &&
+      !appState.editingTextElement &&
       !appState.editingLinearElement
     ) {
       return t("hints.deepBoxSelect");

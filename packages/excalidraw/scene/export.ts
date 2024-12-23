@@ -34,7 +34,7 @@ import {
 import { newTextElement } from "../element";
 import { type Mutable } from "../utility-types";
 import { newElementWith } from "../element/mutateElement";
-import { isFrameLikeElement, isTextElement } from "../element/typeChecks";
+import { isFrameLikeElement } from "../element/typeChecks";
 import type { RenderableElementsMap } from "./types";
 import { syncInvalidIndices } from "../fractionalIndex";
 import { renderStaticScene } from "../renderer/staticScene";
@@ -174,7 +174,7 @@ export const exportToCanvas = async (
     return { canvas, scale: appState.exportScale };
   },
   loadFonts: () => Promise<void> = async () => {
-    await Fonts.loadFontsForElements(elements);
+    await Fonts.loadElementsFonts(elements);
   },
 ) => {
   // load font faces before continuing, by default leverages browsers' [FontFace API](https://developer.mozilla.org/en-US/docs/Web/API/FontFace)
@@ -184,6 +184,11 @@ export const exportToCanvas = async (
     exportingFrame ?? null,
     appState.frameRendering ?? null,
   );
+  // for canvas export, don't clip if exporting a specific frame as it would
+  // clip the corners of the content
+  if (exportingFrame) {
+    frameRendering.clip = false;
+  }
 
   const elementsForRender = prepareElementsForRender({
     elements,
@@ -268,6 +273,7 @@ export const exportToSvg = async (
     renderEmbeddables?: boolean;
     exportingFrame?: ExcalidrawFrameLikeElement | null;
     skipInliningFonts?: true;
+    reuseImages?: boolean;
   },
 ): Promise<SVGSVGElement> => {
   const frameRendering = getFrameRenderingConfig(
@@ -302,9 +308,7 @@ export const exportToSvg = async (
   // the tempScene hack which duplicates and regenerates ids
   if (exportEmbedScene) {
     try {
-      metadata = await (
-        await import("../data/image")
-      ).encodeSvgMetadata({
+      metadata = (await import("../data/image")).encodeSvgMetadata({
         // when embedding scene, we want to embed the origionally supplied
         // elements which don't contain the temp frame labels.
         // But it also requires that the exportToSvg is being supplied with
@@ -350,55 +354,27 @@ export const exportToSvg = async (
     }) rotate(${frame.angle} ${cx} ${cy})"
           width="${frame.width}"
           height="${frame.height}"
+          ${
+            exportingFrame
+              ? ""
+              : `rx=${FRAME_STYLE.radius} ry=${FRAME_STYLE.radius}`
+          }
           >
           </rect>
         </clipPath>`;
   }
 
-  const fontFamilies = elements.reduce((acc, element) => {
-    if (isTextElement(element)) {
-      acc.add(element.fontFamily);
-    }
+  const fontFaces = !opts?.skipInliningFonts
+    ? await Fonts.generateFontFaceDeclarations(elements)
+    : [];
 
-    return acc;
-  }, new Set<number>());
-
-  const fontFaces = opts?.skipInliningFonts
-    ? []
-    : await Promise.all(
-        Array.from(fontFamilies).map(async (x) => {
-          const { fonts, metadata } = Fonts.registered.get(x) ?? {};
-
-          if (!Array.isArray(fonts)) {
-            console.error(
-              `Couldn't find registered fonts for font-family "${x}"`,
-              Fonts.registered,
-            );
-            return;
-          }
-
-          if (metadata?.local) {
-            // don't inline local fonts
-            return;
-          }
-
-          return Promise.all(
-            fonts.map(
-              async (font) => `@font-face {
-        font-family: ${font.fontFace.family};
-        src: url(${await font.getContent()});
-          }`,
-            ),
-          );
-        }),
-      );
+  const delimiter = "\n      "; // 6 spaces
 
   svgRoot.innerHTML = `
   ${SVG_EXPORT_TAG}
   ${metadata}
   <defs>
-    <style class="style-fonts">
-      ${fontFaces.flat().filter(Boolean).join("\n")}
+    <style class="style-fonts">${delimiter}${fontFaces.join(delimiter)}
     </style>
     ${exportingFrameClipPath}
   </defs>
@@ -440,6 +416,7 @@ export const exportToSvg = async (
               .map((element) => [element.id, true]),
           )
         : new Map(),
+      reuseImages: opts?.reuseImages ?? true,
     },
   );
 

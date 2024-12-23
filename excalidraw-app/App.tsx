@@ -22,7 +22,6 @@ import { t } from "../packages/excalidraw/i18n";
 import {
   Excalidraw,
   LiveCollaborationTrigger,
-  TTDDialog,
   TTDDialogTrigger,
   StoreAction,
   reconcileElements,
@@ -121,6 +120,14 @@ import {
 import { appThemeAtom, useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
 import { useAppLangCode } from "./app-language/language-state";
+import DebugCanvas, {
+  debugRenderer,
+  isVisualDebuggerEnabled,
+  loadSavedDebugState,
+} from "./components/DebugCanvas";
+import { AIComponents } from "./components/AI";
+import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
+import { isElementLink } from "../packages/excalidraw/element/elementLink";
 
 polyfill();
 
@@ -295,7 +302,7 @@ const initializeScene = async (opts: {
           isLoading: false,
         },
         elements: reconcileElements(
-          (scene?.elements as OrderedExcalidrawElement[]) || [],
+          scene?.elements || [],
           excalidrawAPI.getSceneElementsIncludingDeleted() as RemoteExcalidrawElement[],
           excalidrawAPI.getAppState(),
         ),
@@ -337,6 +344,8 @@ const ExcalidrawWrapper = () => {
       resolvablePromise<ExcalidrawInitialDataState | null>();
   }
 
+  const debugCanvasRef = useRef<HTMLCanvasElement>(null);
+
   useEffect(() => {
     trackEvent("load", "frame", getFrame());
     // Delayed so that the app has a time to load the latest SW
@@ -361,6 +370,23 @@ const ExcalidrawWrapper = () => {
     // TODO maybe remove this in several months (shipped: 24-03-11)
     migrationAdapter: LibraryLocalStorageMigrationAdapter,
   });
+
+  const [, forceRefresh] = useState(false);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const debugState = loadSavedDebugState();
+
+      if (debugState.enabled && !window.visualDebug) {
+        window.visualDebug = {
+          data: [],
+        };
+      } else {
+        delete window.visualDebug;
+      }
+      forceRefresh((prev) => !prev);
+    }
+  }, [excalidrawAPI]);
 
   useEffect(() => {
     if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
@@ -626,6 +652,16 @@ const ExcalidrawWrapper = () => {
         }
       });
     }
+
+    // Render the debug scene if the debug canvas is available
+    if (debugCanvasRef.current && excalidrawAPI) {
+      debugRenderer(
+        debugCanvasRef.current,
+        appState,
+        window.devicePixelRatio,
+        () => forceRefresh((prev) => !prev),
+      );
+    }
   };
 
   const [latestShareableLink, setLatestShareableLink] = useState<string | null>(
@@ -817,6 +853,12 @@ const ExcalidrawWrapper = () => {
             </div>
           );
         }}
+        onLinkOpen={(element, event) => {
+          if (element.link && isElementLink(element.link)) {
+            event.preventDefault();
+            excalidrawAPI?.scrollToContent(element.link, { animate: true });
+          }
+        }}
       >
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
@@ -824,6 +866,7 @@ const ExcalidrawWrapper = () => {
           isCollabEnabled={!isCollabDisabled}
           theme={appTheme}
           setTheme={(theme) => setAppTheme(theme)}
+          refresh={() => forceRefresh((prev) => !prev)}
         />
         <AppWelcomeScreen
           onCollabDialogOpen={onCollabDialogOpen}
@@ -849,64 +892,9 @@ const ExcalidrawWrapper = () => {
             </OverwriteConfirmDialog.Action>
           )}
         </OverwriteConfirmDialog>
-        <AppFooter />
-        <TTDDialog
-          onTextSubmit={async (input) => {
-            try {
-              const response = await fetch(
-                `${
-                  import.meta.env.VITE_APP_AI_BACKEND
-                }/v1/ai/text-to-diagram/generate`,
-                {
-                  method: "POST",
-                  headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ prompt: input }),
-                },
-              );
+        <AppFooter onChange={() => excalidrawAPI?.refresh()} />
+        {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
 
-              const rateLimit = response.headers.has("X-Ratelimit-Limit")
-                ? parseInt(response.headers.get("X-Ratelimit-Limit") || "0", 10)
-                : undefined;
-
-              const rateLimitRemaining = response.headers.has(
-                "X-Ratelimit-Remaining",
-              )
-                ? parseInt(
-                    response.headers.get("X-Ratelimit-Remaining") || "0",
-                    10,
-                  )
-                : undefined;
-
-              const json = await response.json();
-
-              if (!response.ok) {
-                if (response.status === 429) {
-                  return {
-                    rateLimit,
-                    rateLimitRemaining,
-                    error: new Error(
-                      "Too many requests today, please try again tomorrow!",
-                    ),
-                  };
-                }
-
-                throw new Error(json.message || "Generation failed...");
-              }
-
-              const generatedResponse = json.generatedResponse;
-              if (!generatedResponse) {
-                throw new Error("Generation failed...");
-              }
-
-              return { generatedResponse, rateLimit, rateLimitRemaining };
-            } catch (err: any) {
-              throw new Error("Request failed");
-            }
-          }}
-        />
         <TTDDialogTrigger />
         {isCollaborating && isOffline && (
           <div className="collab-offline-warning">
@@ -1136,12 +1124,25 @@ const ExcalidrawWrapper = () => {
             },
           ]}
         />
+        {isVisualDebuggerEnabled() && excalidrawAPI && (
+          <DebugCanvas
+            appState={excalidrawAPI.getAppState()}
+            scale={window.devicePixelRatio}
+            ref={debugCanvasRef}
+          />
+        )}
       </Excalidraw>
     </div>
   );
 };
 
 const ExcalidrawApp = () => {
+  const isCloudExportWindow =
+    window.location.pathname === "/excalidraw-plus-export";
+  if (isCloudExportWindow) {
+    return <ExcalidrawPlusIframeExport />;
+  }
+
   return (
     <TopErrorBoundary>
       <Provider unstable_createStore={() => appJotaiStore}>

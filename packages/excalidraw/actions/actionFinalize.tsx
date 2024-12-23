@@ -6,7 +6,6 @@ import { done } from "../components/icons";
 import { t } from "../i18n";
 import { register } from "./register";
 import { mutateElement } from "../element/mutateElement";
-import { isPathALoop } from "../math";
 import { LinearElementEditor } from "../element/linearElementEditor";
 import {
   maybeBindLinearElement,
@@ -16,6 +15,8 @@ import { isBindingElement, isLinearElement } from "../element/typeChecks";
 import type { AppState } from "../types";
 import { resetCursor } from "../cursor";
 import { StoreAction } from "../store";
+import { pointFrom } from "../../math";
+import { isPathALoop } from "../shapes";
 
 export const actionFinalize = register({
   name: "finalize",
@@ -113,10 +114,10 @@ export const actionFinalize = register({
           const linePoints = multiPointElement.points;
           const firstPoint = linePoints[0];
           mutateElement(multiPointElement, {
-            points: linePoints.map((point, index) =>
+            points: linePoints.map((p, index) =>
               index === linePoints.length - 1
-                ? ([firstPoint[0], firstPoint[1]] as const)
-                : point,
+                ? pointFrom(firstPoint[0], firstPoint[1])
+                : p,
             ),
           });
         }
@@ -179,7 +180,7 @@ export const actionFinalize = register({
         newElement: null,
         selectionElement: null,
         multiElement: null,
-        editingElement: null,
+        editingTextElement: null,
         startBoundElement: null,
         suggestedBindings: [],
         selectedElementIds:
@@ -217,6 +218,7 @@ export const actionFinalize = register({
       onClick={updateData}
       visible={appState.multiElement != null}
       size={data?.size || "medium"}
+      style={{ pointerEvents: "all" }}
     />
   ),
 });

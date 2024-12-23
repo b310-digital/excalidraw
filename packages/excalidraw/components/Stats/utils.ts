@@ -1,3 +1,5 @@
+import type { Radians } from "../../../math";
+import { pointFrom, pointRotateRads } from "../../../math";
 import {
   bindOrUnbindLinearElements,
   updateBoundElements,
@@ -30,7 +32,6 @@ import {
   getElementsInGroup,
   isInGroup,
 } from "../../groups";
-import { rotate } from "../../math";
 import type Scene from "../../scene/Scene";
 import type { AppState } from "../../types";
 import { getFontString } from "../../utils";
@@ -150,8 +151,6 @@ export const resizeElement = (
     nextHeight = Math.max(nextHeight, minHeight);
   }
 
-  const { width: oldWidth, height: oldHeight } = latestElement;
-
   mutateElement(
     latestElement,
     {
@@ -200,7 +199,7 @@ export const resizeElement = (
   }
 
   updateBoundElements(latestElement, elementsMap, {
-    oldSize: { width: oldWidth, height: oldHeight },
+    newSize: { width: nextWidth, height: nextHeight },
   });
 
   if (boundTextElement && boundTextFont) {
@@ -229,23 +228,19 @@ export const moveElement = (
     originalElement.x + originalElement.width / 2,
     originalElement.y + originalElement.height / 2,
   ];
-  const [topLeftX, topLeftY] = rotate(
-    originalElement.x,
-    originalElement.y,
-    cx,
-    cy,
+  const [topLeftX, topLeftY] = pointRotateRads(
+    pointFrom(originalElement.x, originalElement.y),
+    pointFrom(cx, cy),
     originalElement.angle,
   );
 
   const changeInX = newTopLeftX - topLeftX;
   const changeInY = newTopLeftY - topLeftY;
 
-  const [x, y] = rotate(
-    newTopLeftX,
-    newTopLeftY,
-    cx + changeInX,
-    cy + changeInY,
-    -originalElement.angle,
+  const [x, y] = pointRotateRads(
+    pointFrom(newTopLeftX, newTopLeftY),
+    pointFrom(cx + changeInX, cy + changeInY),
+    -originalElement.angle as Radians,
   );
 
   mutateElement(

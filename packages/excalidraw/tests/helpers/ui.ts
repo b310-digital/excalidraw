@@ -1,4 +1,3 @@
-import type { Point, ToolType } from "../../types";
 import type {
   ExcalidrawElement,
   ExcalidrawLinearElement,
@@ -9,6 +8,7 @@ import type {
   ExcalidrawDiamondElement,
   ExcalidrawTextContainer,
   ExcalidrawTextElementWithContainer,
+  ExcalidrawImageElement,
 } from "../../element/types";
 import type { TransformHandleType } from "../../element/transformHandles";
 import {
@@ -30,10 +30,13 @@ import {
   isFrameLikeElement,
 } from "../../element/typeChecks";
 import { getCommonBounds, getElementPointsCoords } from "../../element/bounds";
-import { rotatePoint } from "../../math";
 import { getTextEditor } from "../queries/dom";
 import { arrayToMap } from "../../utils";
 import { createTestHook } from "../../components/App";
+import type { GlobalPoint, LocalPoint, Radians } from "../../../math";
+import { pointFrom, pointRotateRads } from "../../../math";
+import { cropElement } from "../../element/cropElement";
+import type { ToolType } from "../../types";
 
 // so that window.h is available when App.tsx is not imported as well.
 createTestHook();
@@ -68,8 +71,11 @@ export class Keyboard {
     }
   };
 
-  static keyDown = (key: string) => {
-    fireEvent.keyDown(document, {
+  static keyDown = (
+    key: string,
+    target: HTMLElement | Document | Window = document,
+  ) => {
+    fireEvent.keyDown(target, {
       key,
       ctrlKey,
       shiftKey,
@@ -77,8 +83,11 @@ export class Keyboard {
     });
   };
 
-  static keyUp = (key: string) => {
-    fireEvent.keyUp(document, {
+  static keyUp = (
+    key: string,
+    target: HTMLElement | Document | Window = document,
+  ) => {
+    fireEvent.keyUp(target, {
       key,
       ctrlKey,
       shiftKey,
@@ -86,9 +95,9 @@ export class Keyboard {
     });
   };
 
-  static keyPress = (key: string) => {
-    Keyboard.keyDown(key);
-    Keyboard.keyUp(key);
+  static keyPress = (key: string, target?: HTMLElement | Document | Window) => {
+    Keyboard.keyDown(key, target);
+    Keyboard.keyUp(key, target);
   };
 
   static codeDown = (code: string) => {
@@ -131,27 +140,32 @@ export class Keyboard {
   };
 }
 
-const getElementPointForSelection = (element: ExcalidrawElement): Point => {
+const getElementPointForSelection = (
+  element: ExcalidrawElement,
+): GlobalPoint => {
   const { x, y, width, height, angle } = element;
-  const target: Point = [
+  const target = pointFrom<GlobalPoint>(
     x +
       (isLinearElement(element) || isFreeDrawElement(element) ? 0 : width / 2),
     y,
-  ];
-  let center: Point;
+  );
+  let center: GlobalPoint;
 
   if (isLinearElement(element)) {
     const bounds = getElementPointsCoords(element, element.points);
-    center = [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2];
+    center = pointFrom(
+      (bounds[0] + bounds[2]) / 2,
+      (bounds[1] + bounds[3]) / 2,
+    );
   } else {
-    center = [x + width / 2, y + height / 2];
+    center = pointFrom(x + width / 2, y + height / 2);
   }
 
   if (isTextElement(element)) {
     return center;
   }
 
-  return rotatePoint(target, center, angle);
+  return pointRotateRads(target, center, angle);
 };
 
 export class Pointer {
@@ -328,7 +342,7 @@ const transform = (
     const isFrameSelected = elements.some(isFrameLikeElement);
     const transformHandles = getTransformHandlesFromCoords(
       [x1, y1, x2, y2, (x1 + x2) / 2, (y1 + y2) / 2],
-      0,
+      0 as Radians,
       h.state.zoom,
       "mouse",
       isFrameSelected ? OMIT_SIDES_FOR_FRAME : OMIT_SIDES_FOR_MULTIPLE_ELEMENTS,
@@ -450,7 +464,7 @@ export class UI {
       width?: number;
       height?: number;
       angle?: number;
-      points?: T extends "line" | "arrow" | "freedraw" ? Point[] : never;
+      points?: T extends "line" | "arrow" | "freedraw" ? LocalPoint[] : never;
     } = {},
   ): Element<T> & {
     /** Returns the actual, current element from the elements array, instead
@@ -459,9 +473,9 @@ export class UI {
   } {
     const width = initialWidth ?? initialHeight ?? size;
     const height = initialHeight ?? size;
-    const points: Point[] = initialPoints ?? [
-      [0, 0],
-      [width, height],
+    const points: LocalPoint[] = initialPoints ?? [
+      pointFrom(0, 0),
+      pointFrom(width, height),
     ];
 
     UI.clickTool(type);
@@ -547,6 +561,38 @@ export class UI {
     keyboardModifiers: KeyboardModifiers = {},
   ) {
     return transform(element, handle, mouseMove, keyboardModifiers);
+  }
+
+  static crop(
+    element: ExcalidrawImageElement,
+    handle: TransformHandleDirection,
+    naturalWidth: number,
+    naturalHeight: number,
+    mouseMove: [deltaX: number, deltaY: number],
+    keepAspectRatio = false,
+  ) {
+    const handleCoords = getTransformHandles(
+      element,
+      h.state.zoom,
+      arrayToMap(h.elements),
+      "mouse",
+      {},
+    )[handle]!;
+
+    const clientX = handleCoords[0] + handleCoords[2] / 2;
+    const clientY = handleCoords[1] + handleCoords[3] / 2;
+
+    const mutations = cropElement(
+      element,
+      handle,
+      naturalWidth,
+      naturalHeight,
+      clientX + mouseMove[0],
+      clientY + mouseMove[1],
+      keepAspectRatio ? element.width / element.height : undefined,
+    );
+
+    API.updateElement(element, mutations);
   }
 
   static rotate(

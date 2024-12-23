@@ -26,6 +26,7 @@ import { trackEvent } from "../analytics";
 import {
   hasBoundTextElement,
   isElbowArrow,
+  isImageElement,
   isLinearElement,
   isTextElement,
 } from "../element/typeChecks";
@@ -45,11 +46,11 @@ import {
   frameToolIcon,
   mermaidLogoIcon,
   laserPointerToolIcon,
-  OpenAIIcon,
   MagicIcon,
 } from "./icons";
 import { KEYS } from "../keys";
 import { useTunnels } from "../context/tunnels";
+import { CLASSES } from "../constants";
 
 export const canChangeStrokeColor = (
   appState: UIAppState,
@@ -104,7 +105,9 @@ export const SelectedShapeActions = ({
   ) {
     isSingleElementBoundContainer = true;
   }
-  const isEditing = Boolean(appState.editingElement);
+  const isEditingTextOrNewElement = Boolean(
+    appState.editingTextElement || appState.newElement,
+  );
   const device = useDevice();
   const isRTL = document.documentElement.getAttribute("dir") === "rtl";
 
@@ -124,6 +127,11 @@ export const SelectedShapeActions = ({
     targetElements.length === 1 &&
     isLinearElement(targetElements[0]) &&
     !isElbowArrow(targetElements[0]);
+
+  const showCropEditorAction =
+    !appState.croppingElementId &&
+    targetElements.length === 1 &&
+    isImageElement(targetElements[0]);
 
   return (
     <div className="panelColumn">
@@ -234,7 +242,7 @@ export const SelectedShapeActions = ({
           </div>
         </fieldset>
       )}
-      {!isEditing && targetElements.length > 0 && (
+      {!isEditingTextOrNewElement && targetElements.length > 0 && (
         <fieldset>
           <legend>{t("labels.actions")}</legend>
           <div className="buttonList">
@@ -243,6 +251,7 @@ export const SelectedShapeActions = ({
             {renderAction("group")}
             {renderAction("ungroup")}
             {showLinkIcon && renderAction("hyperlink")}
+            {showCropEditorAction && renderAction("cropEditor")}
             {showLineEditorAction && renderAction("toggleLinearEditor")}
           </div>
         </fieldset>
@@ -400,7 +409,7 @@ export const ShapesSwitcher = ({
           >
             {t("toolBar.mermaidToExcalidraw")}
           </DropdownMenu.Item>
-          {app.props.aiEnabled !== false && (
+          {app.props.aiEnabled !== false && app.plugins.diagramToCode && (
             <>
               <DropdownMenu.Item
                 onSelect={() => app.onMagicframeToolSelect()}
@@ -409,20 +418,6 @@ export const ShapesSwitcher = ({
               >
                 {t("toolBar.magicframe")}
                 <DropdownMenu.Item.Badge>AI</DropdownMenu.Item.Badge>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                onSelect={() => {
-                  trackEvent("ai", "open-settings", "d2c");
-                  app.setOpenDialog({
-                    name: "settings",
-                    source: "settings",
-                    tab: "diagram-to-code",
-                  });
-                }}
-                icon={OpenAIIcon}
-                data-testid="toolbar-magicSettings"
-              >
-                {t("toolBar.magicSettings")}
               </DropdownMenu.Item>
             </>
           )}
@@ -439,7 +434,7 @@ export const ZoomActions = ({
   renderAction: ActionManager["renderAction"];
   zoom: Zoom;
 }) => (
-  <Stack.Col gap={1} className="zoom-actions">
+  <Stack.Col gap={1} className={CLASSES.ZOOM_ACTIONS}>
     <Stack.Row align="center">
       {renderAction("zoomOut")}
       {renderAction("resetZoom")}

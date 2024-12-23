@@ -10,7 +10,7 @@ import {
 } from "../clipboard";
 import { actionDeleteSelected } from "./actionDeleteSelected";
 import { exportCanvas, prepareElementsForExport } from "../data/index";
-import { isTextElement } from "../element";
+import { getTextFromElements, isTextElement } from "../element";
 import { t } from "../i18n";
 import { isFirefox } from "../constants";
 import { DuplicateIcon, cutIcon, pngIcon, svgIcon } from "../components/icons";
@@ -147,14 +147,32 @@ export const actionCopyAsSvg = register({
           name: app.getName(),
         },
       );
+
+      const selectedElements = app.scene.getSelectedElements({
+        selectedElementIds: appState.selectedElementIds,
+        includeBoundTextElement: true,
+        includeElementsInFrames: true,
+      });
+
       return {
+        appState: {
+          toast: {
+            message: t("toast.copyToClipboardAsSvg", {
+              exportSelection: selectedElements.length
+                ? t("toast.selection")
+                : t("toast.canvas"),
+              exportColorScheme: appState.exportWithDarkMode
+                ? t("buttons.darkMode")
+                : t("buttons.lightMode"),
+            }),
+          },
+        },
         storeAction: StoreAction.NONE,
       };
     } catch (error: any) {
       console.error(error);
       return {
         appState: {
-          ...appState,
           errorMessage: error.message,
         },
         storeAction: StoreAction.NONE,
@@ -239,16 +257,8 @@ export const copyText = register({
       includeBoundTextElement: true,
     });
 
-    const text = selectedElements
-      .reduce((acc: string[], element) => {
-        if (isTextElement(element)) {
-          acc.push(element.text);
-        }
-        return acc;
-      }, [])
-      .join("\n\n");
     try {
-      copyTextToSystemClipboard(text);
+      copyTextToSystemClipboard(getTextFromElements(selectedElements));
     } catch (e) {
       throw new Error(t("errors.copyToSystemClipboardFailed"));
     }

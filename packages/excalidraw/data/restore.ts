@@ -5,6 +5,7 @@ import type {
   ExcalidrawLinearElement,
   ExcalidrawSelectionElement,
   ExcalidrawTextElement,
+  FixedPointBinding,
   FontFamilyValues,
   OrderedExcalidrawElement,
   PointBinding,
@@ -21,6 +22,7 @@ import {
 import {
   isArrowElement,
   isElbowArrow,
+  isFixedPointBinding,
   isLinearElement,
   isTextElement,
   isUsingAdaptiveRadius,
@@ -40,11 +42,7 @@ import {
 import { getDefaultAppState } from "../appState";
 import { LinearElementEditor } from "../element/linearElementEditor";
 import { bumpVersion } from "../element/mutateElement";
-import {
-  getUpdatedTimestamp,
-  isFiniteNumber,
-  updateActiveTool,
-} from "../utils";
+import { getUpdatedTimestamp, updateActiveTool } from "../utils";
 import { arrayToMap } from "../utils";
 import type { MarkOptional, Mutable } from "../utility-types";
 import { detectLineHeight, getContainerElement } from "../element/textElement";
@@ -58,6 +56,8 @@ import {
   getNormalizedGridStep,
   getNormalizedZoom,
 } from "../scene";
+import type { LocalPoint, Radians } from "../../math";
+import { isFiniteNumber, pointFrom } from "../../math";
 
 type RestoredAppState = Omit<
   AppState,
@@ -103,8 +103,8 @@ const getFontFamilyByName = (fontFamilyName: string): FontFamilyValues => {
 
 const repairBinding = (
   element: ExcalidrawLinearElement,
-  binding: PointBinding | null,
-): PointBinding | null => {
+  binding: PointBinding | FixedPointBinding | null,
+): PointBinding | FixedPointBinding | null => {
   if (!binding) {
     return null;
   }
@@ -112,9 +112,11 @@ const repairBinding = (
   return {
     ...binding,
     focus: binding.focus || 0,
-    fixedPoint: isElbowArrow(element)
-      ? normalizeFixedPoint(binding.fixedPoint ?? [0, 0])
-      : null,
+    ...(isElbowArrow(element) && isFixedPointBinding(binding)
+      ? {
+          fixedPoint: normalizeFixedPoint(binding.fixedPoint ?? [0, 0]),
+        }
+      : {}),
   };
 };
 
@@ -152,7 +154,7 @@ const restoreElementWithProperties = <
     roughness: element.roughness ?? DEFAULT_ELEMENT_PROPS.roughness,
     opacity:
       element.opacity == null ? DEFAULT_ELEMENT_PROPS.opacity : element.opacity,
-    angle: element.angle || 0,
+    angle: element.angle || (0 as Radians),
     x: extra.x ?? element.x ?? 0,
     y: extra.y ?? element.y ?? 0,
     strokeColor: element.strokeColor || DEFAULT_ELEMENT_PROPS.strokeColor,
@@ -188,6 +190,10 @@ const restoreElementWithProperties = <
   }
 
   return {
+    // spread the original element properties to not lose unknown ones
+    // for forward-compatibility
+    ...element,
+    // normalized properties
     ...base,
     ...getNormalizedDimensions(base),
     ...extra,
@@ -256,6 +262,7 @@ const restoreElement = (
         status: element.status || "pending",
         fileId: element.fileId,
         scale: element.scale || [1, 1],
+        crop: element.crop ?? null,
       });
     case "line":
     // @ts-ignore LEGACY type
@@ -266,10 +273,7 @@ const restoreElement = (
       let y = element.y;
       let points = // migrate old arrow model to new one
         !Array.isArray(element.points) || element.points.length < 2
-          ? [
-              [0, 0],
-              [element.width, element.height],
-            ]
+          ? [pointFrom(0, 0), pointFrom(element.width, element.height)]
           : element.points;
 
       if (points[0][0] !== 0 || points[0][1] !== 0) {
@@ -293,14 +297,11 @@ const restoreElement = (
       });
     case "arrow": {
       const { startArrowhead = null, endArrowhead = "arrow" } = element;
-      let x = element.x;
-      let y = element.y;
-      let points = // migrate old arrow model to new one
+      let x: number | undefined = element.x;
+      let y: number | undefined = element.y;
+      let points: readonly LocalPoint[] | undefined = // migrate old arrow model to new one
         !Array.isArray(element.points) || element.points.length < 2
-          ? [
-              [0, 0],
-              [element.width, element.height],
-            ]
+          ? [pointFrom(0, 0), pointFrom(element.width, element.height)]
           : element.points;
 
       if (points[0][0] !== 0 || points[0][1] !== 0) {

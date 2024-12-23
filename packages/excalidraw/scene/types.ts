@@ -46,6 +46,13 @@ export type SVGRenderConfig = {
   frameRendering: AppState["frameRendering"];
   canvasBackgroundColor: AppState["viewBackgroundColor"];
   embedsValidationStatus: EmbedsValidationStatus;
+  /**
+   * whether to attempt to reuse images as much as possible through symbols
+   * (reduces SVG size, but may be incompoatible with some SVG renderers)
+   *
+   * @default true
+   */
+  reuseImages: boolean;
 };
 
 export type InteractiveCanvasRenderConfig = {
@@ -90,6 +97,17 @@ export type InteractiveSceneRenderConfig = {
   renderConfig: InteractiveCanvasRenderConfig;
   device: Device;
   callback: (data: RenderInteractiveSceneCallback) => void;
+};
+
+export type NewElementSceneRenderConfig = {
+  canvas: HTMLCanvasElement | null;
+  rc: RoughCanvas;
+  newElement: ExcalidrawElement | null;
+  elementsMap: RenderableElementsMap;
+  allElementsMap: NonDeletedSceneElementsMap;
+  scale: number;
+  appState: AppState;
+  renderConfig: StaticCanvasRenderConfig;
 };
 
 export type SceneScroll = {

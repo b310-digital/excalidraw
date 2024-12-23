@@ -7,11 +7,11 @@ import type {
 
 import type { Bounds } from "./bounds";
 import { getElementAbsoluteCoords } from "./bounds";
-import { rotate } from "../math";
 import type { Device, InteractiveCanvasAppState, Zoom } from "../types";
 import {
   isElbowArrow,
   isFrameLikeElement,
+  isImageElement,
   isLinearElement,
 } from "./typeChecks";
 import {
@@ -19,6 +19,8 @@ import {
   isAndroid,
   isIOS,
 } from "../constants";
+import type { Radians } from "../../math";
+import { pointFrom, pointRotateRads } from "../../math";
 
 export type TransformHandleDirection =
   | "n"
@@ -91,9 +93,13 @@ const generateTransformHandle = (
   height: number,
   cx: number,
   cy: number,
-  angle: number,
+  angle: Radians,
 ): TransformHandle => {
-  const [xx, yy] = rotate(x + width / 2, y + height / 2, cx, cy, angle);
+  const [xx, yy] = pointRotateRads(
+    pointFrom(x + width / 2, y + height / 2),
+    pointFrom(cx, cy),
+    angle,
+  );
   return [xx - width / 2, yy - height / 2, width, height];
 };
 
@@ -119,11 +125,12 @@ export const getOmitSidesForDevice = (device: Device) => {
 
 export const getTransformHandlesFromCoords = (
   [x1, y1, x2, y2, cx, cy]: [number, number, number, number, number, number],
-  angle: number,
+  angle: Radians,
   zoom: Zoom,
   pointerType: PointerType,
   omitSides: { [T in TransformHandleType]?: boolean } = {},
   margin = 4,
+  spacing = DEFAULT_TRANSFORM_HANDLE_SPACING,
 ): TransformHandles => {
   const size = transformHandleSizes[pointerType];
   const handleWidth = size / zoom.value;
@@ -135,8 +142,7 @@ export const getTransformHandlesFromCoords = (
   const width = x2 - x1;
   const height = y2 - y1;
   const dashedLineMargin = margin / zoom.value;
-  const centeringOffset =
-    (size - DEFAULT_TRANSFORM_HANDLE_SPACING * 2) / (2 * zoom.value);
+  const centeringOffset = (size - spacing * 2) / (2 * zoom.value);
 
   const transformHandles: TransformHandles = {
     nw: omitSides.nw
@@ -296,8 +302,10 @@ export const getTransformHandles = (
       rotation: true,
     };
   }
-  const dashedLineMargin = isLinearElement(element)
+  const margin = isLinearElement(element)
     ? DEFAULT_TRANSFORM_HANDLE_SPACING + 8
+    : isImageElement(element)
+    ? 0
     : DEFAULT_TRANSFORM_HANDLE_SPACING;
   return getTransformHandlesFromCoords(
     getElementAbsoluteCoords(element, elementsMap, true),
@@ -305,7 +313,8 @@ export const getTransformHandles = (
     zoom,
     pointerType,
     omitSides,
-    dashedLineMargin,
+    margin,
+    isImageElement(element) ? 0 : undefined,
   );
 };
 
