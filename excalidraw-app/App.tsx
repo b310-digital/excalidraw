@@ -97,6 +97,7 @@ import {
   useAtomWithInitialValue,
   appJotaiStore,
 } from "./app-jotai";
+import { getStorageBackend } from "./data/config";
 
 import "./index.scss";
 import type { ResolutionType } from "@excalidraw/excalidraw/utility-types";
@@ -429,11 +430,14 @@ const ExcalidrawWrapper = () => {
           }, [] as FileId[]) || [];
 
         if (data.isExternalScene) {
-          loadFilesFromFirebase(
-            `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
-            data.key,
-            fileIds,
-          ).then(({ loadedFiles, erroredFiles }) => {
+          getStorageBackend()
+          .then((storageBackend) => {
+            return storageBackend.loadFilesFromStorageBackend(
+              `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
+              data.key,
+              fileIds,
+            );
+          }).then(({ loadedFiles, erroredFiles }) => {
             excalidrawAPI.addFiles(loadedFiles);
             updateStaleImageStatuses({
               excalidrawAPI,
