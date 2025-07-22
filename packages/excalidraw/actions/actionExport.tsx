@@ -1,25 +1,35 @@
-import { ExportIcon, questionCircle, saveAs } from "../components/icons";
+import {
+  KEYS,
+  DEFAULT_EXPORT_PADDING,
+  EXPORT_SCALES,
+  THEME,
+} from "@excalidraw/common";
+
+import { getNonDeletedElements } from "@excalidraw/element";
+
+import { CaptureUpdateAction } from "@excalidraw/element";
+
+import type { Theme } from "@excalidraw/element/types";
+
+import { useDevice } from "../components/App";
+import { CheckboxItem } from "../components/CheckboxItem";
+import { DarkModeToggle } from "../components/DarkModeToggle";
 import { ProjectName } from "../components/ProjectName";
 import { ToolButton } from "../components/ToolButton";
 import { Tooltip } from "../components/Tooltip";
-import { DarkModeToggle } from "../components/DarkModeToggle";
+import { ExportIcon, questionCircle, saveAs } from "../components/icons";
 import { loadFromJSON, saveAsJSON } from "../data";
-import { resaveAsImageWithScene } from "../data/resave";
-import { t } from "../i18n";
-import { useDevice } from "../components/App";
-import { KEYS } from "../keys";
-import { register } from "./register";
-import { CheckboxItem } from "../components/CheckboxItem";
-import { getExportSize } from "../scene/export";
-import { DEFAULT_EXPORT_PADDING, EXPORT_SCALES, THEME } from "../constants";
-import { getSelectedElements, isSomeElementSelected } from "../scene";
-import { getNonDeletedElements } from "../element";
 import { isImageFileHandle } from "../data/blob";
 import { nativeFileSystemSupported } from "../data/filesystem";
-import type { Theme } from "../element/types";
+import { resaveAsImageWithScene } from "../data/resave";
+
+import { t } from "../i18n";
+import { getSelectedElements, isSomeElementSelected } from "../scene";
+import { getExportSize } from "../scene/export";
 
 import "../components/ToolIcon.scss";
-import { CaptureUpdateAction } from "../store";
+
+import { register } from "./register";
 
 export const actionChangeProjectName = register({
   name: "changeProjectName",

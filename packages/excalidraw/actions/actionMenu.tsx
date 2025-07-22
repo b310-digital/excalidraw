@@ -1,10 +1,16 @@
-import { HamburgerMenuIcon, HelpIconThin, palette } from "../components/icons";
+import { KEYS } from "@excalidraw/common";
+
+import { getNonDeletedElements } from "@excalidraw/element";
+
+import { showSelectedShapeActions } from "@excalidraw/element";
+
+import { CaptureUpdateAction } from "@excalidraw/element";
+
 import { ToolButton } from "../components/ToolButton";
+import { HamburgerMenuIcon, HelpIconThin, palette } from "../components/icons";
 import { t } from "../i18n";
-import { showSelectedShapeActions, getNonDeletedElements } from "../element";
+
 import { register } from "./register";
-import { KEYS } from "../keys";
-import { CaptureUpdateAction } from "../store";
 
 export const actionToggleCanvasMenu = register({
   name: "toggleCanvasMenu",

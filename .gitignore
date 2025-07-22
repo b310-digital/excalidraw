@@ -27,3 +27,4 @@ coverage
 dev-dist
 html
 meta*.json
+.claude

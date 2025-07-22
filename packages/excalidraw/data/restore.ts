@@ -1,3 +1,54 @@
+import { isFiniteNumber, pointFrom } from "@excalidraw/math";
+
+import {
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_TEXT_ALIGN,
+  DEFAULT_VERTICAL_ALIGN,
+  FONT_FAMILY,
+  ROUNDNESS,
+  DEFAULT_SIDEBAR,
+  DEFAULT_ELEMENT_PROPS,
+  DEFAULT_GRID_SIZE,
+  DEFAULT_GRID_STEP,
+  randomId,
+  getUpdatedTimestamp,
+  updateActiveTool,
+  arrayToMap,
+  getSizeFromPoints,
+  normalizeLink,
+  getLineHeight,
+} from "@excalidraw/common";
+import { getNonDeletedElements, isValidPolygon } from "@excalidraw/element";
+import { normalizeFixedPoint } from "@excalidraw/element";
+import {
+  updateElbowArrowPoints,
+  validateElbowPoints,
+} from "@excalidraw/element";
+import { LinearElementEditor } from "@excalidraw/element";
+import { bumpVersion } from "@excalidraw/element";
+import { getContainerElement } from "@excalidraw/element";
+import { detectLineHeight } from "@excalidraw/element";
+import {
+  isArrowBoundToElement,
+  isArrowElement,
+  isElbowArrow,
+  isFixedPointBinding,
+  isLinearElement,
+  isLineElement,
+  isTextElement,
+  isUsingAdaptiveRadius,
+} from "@excalidraw/element";
+
+import { syncInvalidIndices } from "@excalidraw/element";
+
+import { refreshTextDimensions } from "@excalidraw/element";
+
+import { getNormalizedDimensions } from "@excalidraw/element";
+
+import { isInvisiblySmallElement } from "@excalidraw/element";
+
+import type { LocalPoint, Radians } from "@excalidraw/math";
+
 import type {
   ExcalidrawArrowElement,
   ExcalidrawElbowArrowElement,
@@ -12,59 +63,20 @@ import type {
   OrderedExcalidrawElement,
   PointBinding,
   StrokeRoundness,
-} from "../element/types";
-import type { AppState, BinaryFiles, LibraryItem } from "../types";
-import type { ImportedDataState, LegacyAppState } from "./types";
-import {
-  getNonDeletedElements,
-  getNormalizedDimensions,
-  isInvisiblySmallElement,
-  refreshTextDimensions,
-} from "../element";
-import {
-  isArrowElement,
-  isElbowArrow,
-  isFixedPointBinding,
-  isLinearElement,
-  isTextElement,
-  isUsingAdaptiveRadius,
-} from "../element/typeChecks";
-import { randomId } from "../random";
-import {
-  DEFAULT_FONT_FAMILY,
-  DEFAULT_TEXT_ALIGN,
-  DEFAULT_VERTICAL_ALIGN,
-  FONT_FAMILY,
-  ROUNDNESS,
-  DEFAULT_SIDEBAR,
-  DEFAULT_ELEMENT_PROPS,
-  DEFAULT_GRID_SIZE,
-  DEFAULT_GRID_STEP,
-} from "../constants";
+} from "@excalidraw/element/types";
+
+import type { MarkOptional, Mutable } from "@excalidraw/common/utility-types";
+
 import { getDefaultAppState } from "../appState";
-import { LinearElementEditor } from "../element/linearElementEditor";
-import { bumpVersion } from "../element/mutateElement";
-import { getUpdatedTimestamp, updateActiveTool } from "../utils";
-import { arrayToMap } from "../utils";
-import type { MarkOptional, Mutable } from "../utility-types";
-import { getContainerElement } from "../element/textElement";
-import { normalizeLink } from "./url";
-import { syncInvalidIndices } from "../fractionalIndex";
-import { getSizeFromPoints } from "../points";
-import { getLineHeight } from "../fonts";
-import { normalizeFixedPoint } from "../element/binding";
+
 import {
   getNormalizedGridSize,
   getNormalizedGridStep,
   getNormalizedZoom,
 } from "../scene";
-import type { LocalPoint, Radians } from "@excalidraw/math";
-import { isFiniteNumber, pointFrom } from "@excalidraw/math";
-import { detectLineHeight } from "../element/textMeasurements";
-import {
-  updateElbowArrowPoints,
-  validateElbowPoints,
-} from "../element/elbowArrow";
+
+import type { AppState, BinaryFiles, LibraryItem } from "../types";
+import type { ImportedDataState, LegacyAppState } from "./types";
 
 type RestoredAppState = Omit<
   AppState,
@@ -76,6 +88,7 @@ export const AllowedExcalidrawActiveTools: Record<
   boolean
 > = {
   selection: true,
+  lasso: true,
   text: true,
   rectangle: true,
   diamond: true,
@@ -211,7 +224,7 @@ const restoreElementWithProperties = <
       "customData" in extra ? extra.customData : element.customData;
   }
 
-  return {
+  const ret = {
     // spread the original element properties to not lose unknown ones
     // for forward-compatibility
     ...element,
@@ -220,6 +233,12 @@ const restoreElementWithProperties = <
     ...getNormalizedDimensions(base),
     ...extra,
   } as unknown as T;
+
+  // strip legacy props (migrated in previous steps)
+  delete ret.strokeSharpness;
+  delete ret.boundElementIds;
+
+  return ret;
 };
 
 const restoreElement = (
@@ -305,7 +324,8 @@ const restoreElement = (
           : element.points;
 
       if (points[0][0] !== 0 || points[0][1] !== 0) {
-        ({ points, x, y } = LinearElementEditor.getNormalizedPoints(element));
+        ({ points, x, y } =
+          LinearElementEditor.getNormalizeElementPointsAndCoords(element));
       }
 
       return restoreElementWithProperties(element, {
@@ -321,6 +341,13 @@ const restoreElement = (
         points,
         x,
         y,
+        ...(isLineElement(element)
+          ? {
+              polygon: isValidPolygon(element.points)
+                ? element.polygon ?? false
+                : false,
+            }
+          : {}),
         ...getSizeFromPoints(points),
       });
     case "arrow": {
@@ -333,7 +360,8 @@ const restoreElement = (
           : element.points;
 
       if (points[0][0] !== 0 || points[0][1] !== 0) {
-        ({ points, x, y } = LinearElementEditor.getNormalizedPoints(element));
+        ({ points, x, y } =
+          LinearElementEditor.getNormalizeElementPointsAndCoords(element));
       }
 
       const base = {
@@ -422,7 +450,7 @@ const repairContainerElement = (
             // if defined, lest boundElements is stale
             !boundElement.containerId
           ) {
-            (boundElement as Mutable<ExcalidrawTextElement>).containerId =
+            (boundElement as Mutable<typeof boundElement>).containerId =
               container.id;
           }
         }
@@ -446,6 +474,10 @@ const repairBoundElement = (
   const container = boundElement.containerId
     ? elementsMap.get(boundElement.containerId)
     : null;
+
+  (boundElement as Mutable<typeof boundElement>).angle = (
+    isArrowElement(container) ? 0 : container?.angle ?? 0
+  ) as Radians;
 
   if (!container) {
     boundElement.containerId = null;
@@ -573,8 +605,7 @@ export const restoreElements = (
   return restoredElements.map((element) => {
     if (
       isElbowArrow(element) &&
-      element.startBinding == null &&
-      element.endBinding == null &&
+      !isArrowBoundToElement(element) &&
       !validateElbowPoints(element.points)
     ) {
       return {

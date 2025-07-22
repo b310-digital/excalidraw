@@ -10,6 +10,13 @@
  *   (localStorage, indexedDB).
  */
 
+import { clearAppStateForLocalStorage } from "@excalidraw/excalidraw/appState";
+import {
+  CANVAS_SEARCH_TAB,
+  DEFAULT_SIDEBAR,
+  debounce,
+} from "@excalidraw/common";
+import { clearElementsForLocalStorage } from "@excalidraw/element";
 import {
   createStore,
   entries,
@@ -19,26 +26,19 @@ import {
   setMany,
   get,
 } from "idb-keyval";
-import { clearAppStateForLocalStorage } from "@excalidraw/excalidraw/appState";
-import {
-  CANVAS_SEARCH_TAB,
-  DEFAULT_SIDEBAR,
-} from "@excalidraw/excalidraw/constants";
+
 import type { LibraryPersistedData } from "@excalidraw/excalidraw/data/library";
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
-import { clearElementsForLocalStorage } from "@excalidraw/excalidraw/element";
-import type {
-  ExcalidrawElement,
-  FileId,
-} from "@excalidraw/excalidraw/element/types";
+import type { ExcalidrawElement, FileId } from "@excalidraw/element/types";
 import type {
   AppState,
   BinaryFileData,
   BinaryFiles,
 } from "@excalidraw/excalidraw/types";
-import type { MaybePromise } from "@excalidraw/excalidraw/utility-types";
-import { debounce } from "@excalidraw/excalidraw/utils";
+import type { MaybePromise } from "@excalidraw/common/utility-types";
+
 import { SAVE_TO_LOCAL_STORAGE_TIMEOUT, STORAGE_KEYS } from "../app_constants";
+
 import { FileManager } from "./FileManager";
 import { Locker } from "./Locker";
 import { updateBrowserStateVersion } from "./tabSync";

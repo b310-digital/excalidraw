@@ -1,4 +1,16 @@
 import React from "react";
+import { vi } from "vitest";
+
+import { KEYS, reseed } from "@excalidraw/common";
+
+import { SHAPES } from "../components/shapes";
+
+import { Excalidraw } from "../index";
+import * as InteractiveCanvas from "../renderer/interactiveScene";
+import * as StaticScene from "../renderer/staticScene";
+
+import { API } from "./helpers/api";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
 import {
   render,
   fireEvent,
@@ -7,15 +19,6 @@ import {
   assertSelectedElements,
   unmountComponent,
 } from "./test-utils";
-import { Excalidraw } from "../index";
-import * as StaticScene from "../renderer/staticScene";
-import * as InteractiveCanvas from "../renderer/interactiveScene";
-import { KEYS } from "../keys";
-import { reseed } from "../random";
-import { API } from "./helpers/api";
-import { Keyboard, Pointer, UI } from "./helpers/ui";
-import { SHAPES } from "../shapes";
-import { vi } from "vitest";
 
 unmountComponent();
 

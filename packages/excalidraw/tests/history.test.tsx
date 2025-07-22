@@ -1,6 +1,66 @@
 import React from "react";
+import {
+  queryByText,
+  fireEvent,
+  queryByTestId,
+  waitFor,
+} from "@testing-library/react";
+import { vi } from "vitest";
+import { pointFrom } from "@excalidraw/math";
+
+import { newElementWith } from "@excalidraw/element";
+
+import {
+  EXPORT_DATA_TYPES,
+  MIME_TYPES,
+  ORIG_ID,
+  KEYS,
+  arrayToMap,
+  COLOR_PALETTE,
+  DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX,
+  DEFAULT_ELEMENT_STROKE_COLOR_INDEX,
+  reseed,
+} from "@excalidraw/common";
+
+import "@excalidraw/utils/test-utils";
+
+import { ElementsDelta, AppStateDelta } from "@excalidraw/element";
+
+import { CaptureUpdateAction, StoreDelta } from "@excalidraw/element";
+
+import type { LocalPoint, Radians } from "@excalidraw/math";
+
+import type {
+  ExcalidrawElbowArrowElement,
+  ExcalidrawFrameElement,
+  ExcalidrawGenericElement,
+  ExcalidrawLinearElement,
+  ExcalidrawTextElement,
+  FileId,
+  FixedPointBinding,
+  FractionalIndex,
+  SceneElementsMap,
+} from "@excalidraw/element/types";
+
 import "../global.d.ts";
+
+import {
+  actionSendBackward,
+  actionBringForward,
+  actionSendToBack,
+} from "../actions";
+import { createUndoAction, createRedoAction } from "../actions/actionHistory";
+import { actionToggleViewMode } from "../actions/actionToggleViewMode";
 import * as StaticScene from "../renderer/staticScene";
+import { getDefaultAppState } from "../appState";
+import { Excalidraw } from "../index";
+import { createPasteEvent } from "../clipboard";
+
+import * as blobModule from "../data/blob";
+
+import { API } from "./helpers/api";
+import { Keyboard, Pointer, UI } from "./helpers/ui";
+import { mockHTMLImageElement } from "./helpers/mocks";
 import {
   GlobalTestState,
   act,
@@ -8,47 +68,11 @@ import {
   render,
   togglePopover,
   getCloneByOrigId,
+  checkpointHistory,
+  unmountComponent,
 } from "./test-utils";
-import "../../utils/test-utils";
-import { Excalidraw } from "../index";
-import { Keyboard, Pointer, UI } from "./helpers/ui";
-import { API } from "./helpers/api";
-import { getDefaultAppState } from "../appState";
-import { fireEvent, queryByTestId, waitFor } from "@testing-library/react";
-import { createUndoAction, createRedoAction } from "../actions/actionHistory";
-import { actionToggleViewMode } from "../actions/actionToggleViewMode";
-import { EXPORT_DATA_TYPES, MIME_TYPES, ORIG_ID } from "../constants";
+
 import type { AppState } from "../types";
-import { arrayToMap } from "../utils";
-import {
-  COLOR_PALETTE,
-  DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX,
-  DEFAULT_ELEMENT_STROKE_COLOR_INDEX,
-} from "../colors";
-import { KEYS } from "../keys";
-import { newElementWith } from "../element/mutateElement";
-import type {
-  ExcalidrawElbowArrowElement,
-  ExcalidrawFrameElement,
-  ExcalidrawGenericElement,
-  ExcalidrawLinearElement,
-  ExcalidrawTextElement,
-  FixedPointBinding,
-  FractionalIndex,
-  SceneElementsMap,
-} from "../element/types";
-import {
-  actionSendBackward,
-  actionBringForward,
-  actionSendToBack,
-} from "../actions";
-import { vi } from "vitest";
-import { queryByText } from "@testing-library/react";
-import { HistoryEntry } from "../history";
-import { AppStateChange, ElementsChange } from "../change";
-import { Snapshot, CaptureUpdateAction } from "../store";
-import type { LocalPoint, Radians } from "@excalidraw/math";
-import { pointFrom } from "@excalidraw/math";
 
 const { h } = window;
 
@@ -67,13 +91,15 @@ const checkpoint = (name: string) => {
     ...strippedAppState
   } = h.state;
   expect(strippedAppState).toMatchSnapshot(`[${name}] appState`);
-  expect(h.history).toMatchSnapshot(`[${name}] history`);
   expect(h.elements.length).toMatchSnapshot(`[${name}] number of elements`);
+
   h.elements
     .map(({ seed, versionNonce, ...strippedElement }) => strippedElement)
     .forEach((element, i) =>
       expect(element).toMatchSnapshot(`[${name}] element ${i}`),
     );
+
+  checkpointHistory(h.history, name);
 };
 
 const renderStaticScene = vi.spyOn(StaticScene, "renderStaticScene");
@@ -87,7 +113,22 @@ const violet = COLOR_PALETTE.violet[DEFAULT_ELEMENT_BACKGROUND_COLOR_INDEX];
 
 describe("history", () => {
   beforeEach(() => {
+    unmountComponent();
     renderStaticScene.mockClear();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+
+    reseed(7);
+
+    const generateIdSpy = vi.spyOn(blobModule, "generateIdFromFile");
+    const resizeFileSpy = vi.spyOn(blobModule, "resizeImageFile");
+
+    generateIdSpy.mockImplementation(() => Promise.resolve("fileId" as FileId));
+    resizeFileSpy.mockImplementation((file: File) => Promise.resolve(file));
+
+    Object.assign(document, {
+      elementFromPoint: () => GlobalTestState.canvas,
+    });
   });
 
   afterEach(() => {
@@ -101,12 +142,12 @@ describe("history", () => {
 
       API.setElements([rect]);
 
-      const corrupedEntry = HistoryEntry.create(
-        AppStateChange.empty(),
-        ElementsChange.empty(),
+      const corrupedEntry = StoreDelta.create(
+        ElementsDelta.empty(),
+        AppStateDelta.empty(),
       );
 
-      vi.spyOn(corrupedEntry, "applyTo").mockImplementation(() => {
+      vi.spyOn(corrupedEntry.elements, "applyTo").mockImplementation(() => {
         throw new Error("Oh no, I am corrupted!");
       });
 
@@ -121,7 +162,6 @@ describe("history", () => {
             h.history.undo(
               arrayToMap(h.elements) as SceneElementsMap,
               appState,
-              Snapshot.empty(),
             ) as any,
         );
       } catch (e) {
@@ -142,7 +182,6 @@ describe("history", () => {
             h.history.redo(
               arrayToMap(h.elements) as SceneElementsMap,
               appState,
-              Snapshot.empty(),
             ) as any,
         );
       } catch (e) {
@@ -202,6 +241,37 @@ describe("history", () => {
         expect.objectContaining({ id: rect1.id, isDeleted: false }),
         expect.objectContaining({ id: rect2.id, isDeleted: false }),
       ]);
+    });
+
+    it("should not modify anything on unrelated appstate change", async () => {
+      const rect = API.createElement({ type: "rectangle" });
+      await render(
+        <Excalidraw
+          handleKeyboardGlobally={true}
+          initialData={{
+            elements: [rect],
+          }}
+        />,
+      );
+
+      API.updateScene({
+        appState: {
+          viewModeEnabled: true,
+        },
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+
+      await waitFor(() => {
+        expect(h.state.viewModeEnabled).toBe(true);
+        expect(API.getUndoStack().length).toBe(0);
+        expect(API.getRedoStack().length).toBe(0);
+        expect(h.elements).toEqual([
+          expect.objectContaining({ id: rect.id, isDeleted: false }),
+        ]);
+        expect(h.store.snapshot.elements.get(rect.id)).toEqual(
+          expect.objectContaining({ id: rect.id, isDeleted: false }),
+        );
+      });
     });
 
     it("should not clear the redo stack on standalone appstate change", async () => {
@@ -439,8 +509,8 @@ describe("history", () => {
         expect(h.history.isUndoStackEmpty).toBeTruthy();
       });
 
-      const undoAction = createUndoAction(h.history, h.store);
-      const redoAction = createRedoAction(h.history, h.store);
+      const undoAction = createUndoAction(h.history);
+      const redoAction = createRedoAction(h.history);
       // noop
       API.executeAction(undoAction);
       expect(h.elements).toEqual([
@@ -516,8 +586,8 @@ describe("history", () => {
         expect.objectContaining({ id: "B", isDeleted: false }),
       ]);
 
-      const undoAction = createUndoAction(h.history, h.store);
-      const redoAction = createRedoAction(h.history, h.store);
+      const undoAction = createUndoAction(h.history);
+      const redoAction = createRedoAction(h.history);
       API.executeAction(undoAction);
 
       expect(API.getSnapshot()).toEqual([
@@ -539,6 +609,252 @@ describe("history", () => {
       expect(h.elements).toEqual([
         expect.objectContaining({ id: "A", isDeleted: true }),
         expect.objectContaining({ id: "B", isDeleted: false }),
+      ]);
+    });
+
+    it("should create new history entry on image drag&drop", async () => {
+      await render(<Excalidraw handleKeyboardGlobally={true} />);
+
+      // it's necessary to specify the height in order to calculate natural dimensions of the image
+      h.state.height = 1000;
+
+      const deerImageDimensions = {
+        width: 318,
+        height: 335,
+      };
+
+      mockHTMLImageElement(
+        deerImageDimensions.width,
+        deerImageDimensions.height,
+      );
+
+      await API.drop(await API.loadFile("./fixtures/deer.png"));
+
+      await waitFor(() => {
+        expect(API.getUndoStack().length).toBe(1);
+        expect(API.getRedoStack().length).toBe(0);
+        expect(h.elements).toEqual([
+          expect.objectContaining({
+            type: "image",
+            fileId: expect.any(String),
+            x: expect.toBeNonNaNNumber(),
+            y: expect.toBeNonNaNNumber(),
+            ...deerImageDimensions,
+          }),
+        ]);
+
+        // need to check that delta actually contains initialized image element (with fileId & natural dimensions)
+        expect(
+          Object.values(h.history.undoStack[0].elements.removed)[0].deleted,
+        ).toEqual(
+          expect.objectContaining({
+            type: "image",
+            fileId: expect.any(String),
+            x: expect.toBeNonNaNNumber(),
+            y: expect.toBeNonNaNNumber(),
+            ...deerImageDimensions,
+          }),
+        );
+      });
+
+      Keyboard.undo();
+      expect(API.getUndoStack().length).toBe(0);
+      expect(API.getRedoStack().length).toBe(1);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "image",
+          fileId: expect.any(String),
+          x: expect.toBeNonNaNNumber(),
+          y: expect.toBeNonNaNNumber(),
+          isDeleted: true,
+          ...deerImageDimensions,
+        }),
+      ]);
+
+      Keyboard.redo();
+      expect(API.getUndoStack().length).toBe(1);
+      expect(API.getRedoStack().length).toBe(0);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "image",
+          fileId: expect.any(String),
+          x: expect.toBeNonNaNNumber(),
+          y: expect.toBeNonNaNNumber(),
+          isDeleted: false,
+          ...deerImageDimensions,
+        }),
+      ]);
+    });
+
+    it("should create new history entry on embeddable link drag&drop", async () => {
+      await render(<Excalidraw handleKeyboardGlobally={true} />);
+
+      const link = "https://www.youtube.com/watch?v=gkGMXY0wekg";
+      await API.drop(
+        new Blob([link], {
+          type: MIME_TYPES.text,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(API.getUndoStack().length).toBe(1);
+        expect(API.getRedoStack().length).toBe(0);
+        expect(h.elements).toEqual([
+          expect.objectContaining({
+            type: "embeddable",
+            link,
+          }),
+        ]);
+      });
+
+      Keyboard.undo();
+      expect(API.getUndoStack().length).toBe(0);
+      expect(API.getRedoStack().length).toBe(1);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "embeddable",
+          link,
+          isDeleted: true,
+        }),
+      ]);
+
+      Keyboard.redo();
+      expect(API.getUndoStack().length).toBe(1);
+      expect(API.getRedoStack().length).toBe(0);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "embeddable",
+          link,
+          isDeleted: false,
+        }),
+      ]);
+    });
+
+    it("should create new history entry on image paste", async () => {
+      await render(
+        <Excalidraw autoFocus={true} handleKeyboardGlobally={true} />,
+      );
+
+      // it's necessary to specify the height in order to calculate natural dimensions of the image
+      h.state.height = 1000;
+
+      const smileyImageDimensions = {
+        width: 56,
+        height: 77,
+      };
+
+      mockHTMLImageElement(
+        smileyImageDimensions.width,
+        smileyImageDimensions.height,
+      );
+
+      document.dispatchEvent(
+        createPasteEvent({
+          files: [await API.loadFile("./fixtures/smiley_embedded_v2.png")],
+        }),
+      );
+
+      await waitFor(() => {
+        expect(API.getUndoStack().length).toBe(1);
+        expect(API.getRedoStack().length).toBe(0);
+        expect(h.elements).toEqual([
+          expect.objectContaining({
+            type: "image",
+            fileId: expect.any(String),
+            x: expect.toBeNonNaNNumber(),
+            y: expect.toBeNonNaNNumber(),
+            ...smileyImageDimensions,
+          }),
+        ]);
+        // need to check that delta actually contains initialized image element (with fileId & natural dimensions)
+        expect(
+          Object.values(h.history.undoStack[0].elements.removed)[0].deleted,
+        ).toEqual(
+          expect.objectContaining({
+            type: "image",
+            fileId: expect.any(String),
+            x: expect.toBeNonNaNNumber(),
+            y: expect.toBeNonNaNNumber(),
+            ...smileyImageDimensions,
+          }),
+        );
+      });
+
+      Keyboard.undo();
+      expect(API.getUndoStack().length).toBe(0);
+      expect(API.getRedoStack().length).toBe(1);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "image",
+          fileId: expect.any(String),
+          x: expect.toBeNonNaNNumber(),
+          y: expect.toBeNonNaNNumber(),
+          isDeleted: true,
+          ...smileyImageDimensions,
+        }),
+      ]);
+
+      Keyboard.redo();
+      expect(API.getUndoStack().length).toBe(1);
+      expect(API.getRedoStack().length).toBe(0);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "image",
+          fileId: expect.any(String),
+          x: expect.toBeNonNaNNumber(),
+          y: expect.toBeNonNaNNumber(),
+          isDeleted: false,
+          ...smileyImageDimensions,
+        }),
+      ]);
+    });
+
+    it("should create new history entry on embeddable link paste", async () => {
+      await render(
+        <Excalidraw autoFocus={true} handleKeyboardGlobally={true} />,
+      );
+
+      const link = "https://www.youtube.com/watch?v=gkGMXY0wekg";
+
+      document.dispatchEvent(
+        createPasteEvent({
+          types: {
+            "text/plain": link,
+          },
+        }),
+      );
+
+      await waitFor(() => {
+        expect(API.getUndoStack().length).toBe(1);
+        expect(API.getRedoStack().length).toBe(0);
+        expect(h.elements).toEqual([
+          expect.objectContaining({
+            type: "embeddable",
+            link,
+          }),
+        ]);
+      });
+
+      Keyboard.undo();
+      expect(API.getUndoStack().length).toBe(0);
+      expect(API.getRedoStack().length).toBe(1);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "embeddable",
+          link,
+          isDeleted: true,
+        }),
+      ]);
+
+      Keyboard.redo();
+      expect(API.getUndoStack().length).toBe(1);
+      expect(API.getRedoStack().length).toBe(0);
+      expect(h.elements).toEqual([
+        expect.objectContaining({
+          type: "embeddable",
+          link,
+          isDeleted: false,
+        }),
       ]);
     });
 
@@ -1698,8 +2014,8 @@ describe("history", () => {
         />,
       );
 
-      const undoAction = createUndoAction(h.history, h.store);
-      const redoAction = createRedoAction(h.history, h.store);
+      const undoAction = createUndoAction(h.history);
+      const redoAction = createRedoAction(h.history);
 
       await waitFor(() => {
         expect(h.elements).toEqual([expect.objectContaining({ id: "A" })]);
@@ -1748,7 +2064,7 @@ describe("history", () => {
         />,
       );
 
-      const undoAction = createUndoAction(h.history, h.store);
+      const undoAction = createUndoAction(h.history);
 
       await waitFor(() => {
         expect(h.elements).toEqual([expect.objectContaining({ id: "A" })]);

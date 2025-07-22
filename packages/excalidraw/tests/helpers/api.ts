@@ -1,3 +1,28 @@
+import fs from "fs";
+import path from "path";
+import util from "util";
+
+import { pointFrom, type LocalPoint, type Radians } from "@excalidraw/math";
+
+import { DEFAULT_VERTICAL_ALIGN, ROUNDNESS, assertNever } from "@excalidraw/common";
+
+import {
+  newArrowElement,
+  newElement,
+  newEmbeddableElement,
+  newFrameElement,
+  newFreeDrawElement,
+  newIframeElement,
+  newImageElement,
+  newLinearElement,
+  newMagicFrameElement,
+  newTextElement,
+} from "@excalidraw/element";
+
+import { isLinearElementType } from "@excalidraw/element";
+import { getSelectedElements } from "@excalidraw/element";
+import { selectGroupsForSelectedElements } from "@excalidraw/element";
+
 import type {
   ExcalidrawElement,
   ExcalidrawGenericElement,
@@ -12,35 +37,19 @@ import type {
   ExcalidrawElbowArrowElement,
   ExcalidrawArrowElement,
   FixedSegment,
-} from "../../element/types";
-import { newElement, newTextElement, newLinearElement } from "../../element";
-import { DEFAULT_VERTICAL_ALIGN, ROUNDNESS } from "../../constants";
+} from "@excalidraw/element/types";
+
+import type { Mutable } from "@excalidraw/common/utility-types";
+
+import { getMimeType } from "../../data/blob";
+import { createTestHook } from "../../components/App";
 import { getDefaultAppState } from "../../appState";
 import { GlobalTestState, createEvent, fireEvent, act } from "../test-utils";
-import fs from "fs";
-import util from "util";
-import path from "path";
-import { getMimeType } from "../../data/blob";
-import {
-  newArrowElement,
-  newEmbeddableElement,
-  newFrameElement,
-  newFreeDrawElement,
-  newIframeElement,
-  newImageElement,
-  newMagicFrameElement,
-} from "../../element/newElement";
-import type { AppState } from "../../types";
-import { getSelectedElements } from "../../scene/selection";
-import { isLinearElementType } from "../../element/typeChecks";
-import type { Mutable } from "../../utility-types";
-import { assertNever } from "../../utils";
-import type App from "../../components/App";
-import { createTestHook } from "../../components/App";
+
 import type { Action } from "../../actions/types";
-import { mutateElement } from "../../element/mutateElement";
-import { pointFrom, type LocalPoint, type Radians } from "@excalidraw/math";
-import { selectGroupsForSelectedElements } from "../../groups";
+import type App from "../../components/App";
+import type { AppState } from "../../types";
+
 
 const readFile = util.promisify(fs.readFile);
 // so that window.h is available when App.tsx is not imported as well.
@@ -90,10 +99,10 @@ export class API {
 
   // eslint-disable-next-line prettier/prettier
   static updateElement = <T extends ExcalidrawElement>(
-    ...args: Parameters<typeof mutateElement<T>>
+    ...args: Parameters<typeof h.app.scene.mutateElement<T>>
   ) => {
     act(() => {
-      mutateElement<T>(...args);
+      h.app.scene.mutateElement(...args);
     });
   };
 
@@ -409,12 +418,11 @@ export class API {
 
     });
 
-    mutateElement(
+    h.app.scene.mutateElement(
       rectangle,
       {
         boundElements: [{ type: "text", id: text.id }],
       },
-      false,
     );
 
     return [rectangle, text];
@@ -434,7 +442,6 @@ export class API {
 
     const text = API.createElement({
       type: "text",
-      id: "text2",
       width: 50,
       height: 20,
       containerId: arrow.id,
@@ -444,12 +451,11 @@ export class API {
           : opts?.label?.frameId ?? null,
     });
 
-    mutateElement(
+    h.app.scene.mutateElement(
       arrow,
       {
         boundElements: [{ type: "text", id: text.id }],
       },
-      false,
     );
 
     return [arrow, text];
@@ -493,13 +499,21 @@ export class API {
       value: {
         files,
         getData: (type: string) => {
-          if (type === blob.type) {
+          if (type === blob.type || type === "text") {
             return text;
           }
           return "";
         },
+        types: [blob.type],
       },
     });
+    Object.defineProperty(fileDropEvent, "clientX", {
+      value: 0,
+    });
+    Object.defineProperty(fileDropEvent, "clientY", {
+      value: 0,
+    });
+    
     await fireEvent(GlobalTestState.interactiveCanvas, fileDropEvent);
   };
 
