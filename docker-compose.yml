@@ -6,10 +6,8 @@ services:
       target: development
       args:
         - NODE_ENV=development
-    container_name: excalidraw
     ports:
       - "3000:3000"
-    restart: on-failure
     healthcheck:
       disable: true
     environment:
@@ -25,10 +23,9 @@ services:
       # When testing locally, you can also checkout the repository and start the backend manually:
       # context: ../kits/excalidraw-storage-backend
       # target: development
-    volumes:
-      - ../kits/excalidraw-storage-backend/:/home/node/app
+    # volumes:
+    #   - ../kits/excalidraw-storage-backend/:/home/node/app
     stdin_open: true
-    container_name: excalidraw-storage-backend
     ports:
       - "8080:8080"
     environment:
@@ -36,7 +33,6 @@ services:
 
   excalidraw-room:
     image: excalidraw/excalidraw-room
-    container_name: excalidraw-room
     ports:
       - "5001:80"
 
@@ -53,7 +49,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
     volumes:
       - postgres_data:/var/lib/postgresql/data/pgdata
-    container_name: excalidraw-postgres
     ports:
       - "5432:5432"
 volumes:
