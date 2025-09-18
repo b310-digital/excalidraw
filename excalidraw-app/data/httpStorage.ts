@@ -34,7 +34,7 @@ const HTTP_STORAGE_BACKEND_URL = import.meta.env
 const SCENE_VERSION_LENGTH_BYTES = 4;
 
 // There is a lot of intentional duplication with the firebase file
-// to prevent modifying upstream files and ease futur maintenance of this fork
+// to prevent modifying upstream files and ease future maintenance of this fork
 
 const httpStorageSceneVersionCache = new WeakMap<Socket, number>();
 
@@ -44,7 +44,6 @@ export const isSavedToHttpStorage = (
 ): boolean => {
   if (portal.socket && portal.roomId && portal.roomKey) {
     const sceneVersion = getSceneVersion(elements);
-
     return httpStorageSceneVersionCache.get(portal.socket) === sceneVersion;
   }
   // if no room exists, consider the room saved so that we don't unnecessarily
@@ -58,68 +57,86 @@ export const saveToHttpStorage = async (
   appState: AppState,
 ) => {
   const { roomId, roomKey, socket } = portal;
-  if (
-    // if no room exists, consider the room saved because there's nothing we can
-    // do at this point
-    !roomId ||
-    !roomKey ||
-    !socket ||
-    isSavedToHttpStorage(portal, elements)
-  ) {
+  // if no room exists, consider the room saved because there's nothing we can
+  // do at this point
+  if (!roomId || !roomKey || !socket || isSavedToHttpStorage(portal, elements)) {
     return false;
   }
 
   const sceneVersion = getSceneVersion(elements);
-  const getResponse = await fetch(
-    `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
-  );
+  const getResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`);
 
-  if (!getResponse.ok && getResponse.status !== 404) {
-    return false;
-  }
+  if (!getResponse.ok && getResponse.status !== 404) return false;
 
   if (getResponse.status === 404) {
-    const result: boolean = await saveElementsToBackend(
-      roomKey,
-      roomId,
-      [...elements],
-      sceneVersion,
-    );
+    // Room does not exist → create new room
+    const result = await saveElementsToBackend(roomKey, roomId, [...elements], sceneVersion);
     if (result) {
-      return null;
+      console.debug("[httpStorage] Created new room, cache updated", { roomId, sceneVersion });
+      httpStorageSceneVersionCache.set(socket, sceneVersion);
+      return elements;
     }
     return false;
   }
 
-  // If room already exist, we compare scene versions to check
-  // if we're up to date before saving our scene
+  // Room exists → check scene versions
   const buffer = await getResponse.arrayBuffer();
   const sceneVersionFromRequest = parseSceneVersionFromRequest(buffer);
+
   if (sceneVersionFromRequest >= sceneVersion) {
-    return false;
+    // KeepAlive Log
+    console.debug("[httpStorage] Keepalive/Fallback PUT → syncing with server", {
+      roomId,
+      localSceneVersion: sceneVersion,
+      serverSceneVersion: sceneVersionFromRequest,
+    });
+
+    // Fallback PUT: reconciling old room with server
+    const existingElements = await getElementsFromBuffer(buffer, roomKey);
+    const reconciledElements = getSyncableElements(
+      reconcileElements(
+        [...elements] as unknown as RemoteExcalidrawElement[],
+        [...existingElements] as unknown as RemoteExcalidrawElement[],
+        appState
+      )
+    );
+
+    const newSceneVersion = sceneVersionFromRequest + 1;
+    const result = await saveElementsToBackend(roomKey, roomId, reconciledElements, newSceneVersion);
+
+    if (result) {
+      // Result log
+      console.debug("[httpStorage] Fallback PUT succeeded, cache updated", {
+        roomId,
+        sceneVersion: newSceneVersion,
+      });
+      httpStorageSceneVersionCache.set(socket, newSceneVersion);
+      return reconciledElements;
+    } else {
+      console.warn("[httpStorage] Fallback PUT failed", { roomId, newSceneVersion });
+      return false;
+    }
   }
 
+  // Normal PUT: reconcile with existing elements
   const existingElements = await getElementsFromBuffer(buffer, roomKey);
   const reconciledElements = getSyncableElements(
     reconcileElements(
-      elements,
-      existingElements as OrderedExcalidrawElement[] as RemoteExcalidrawElement[],
-      appState,
-    ),
+      [...elements] as unknown as RemoteExcalidrawElement[],
+      [...existingElements] as unknown as RemoteExcalidrawElement[],
+      appState
+    )
   );
 
-  const result: boolean = await saveElementsToBackend(
-    roomKey,
-    roomId,
-    reconciledElements,
-    sceneVersion,
-  );
-
+  const result = await saveElementsToBackend(roomKey, roomId, reconciledElements, sceneVersion);
   if (result) {
+    console.debug("[httpStorage] PUT succeeded, cache updated", { roomId, sceneVersion });
     httpStorageSceneVersionCache.set(socket, sceneVersion);
     return elements;
+  } else {
+    console.warn("[httpStorage] PUT failed", { roomId, sceneVersion });
+    return false;
   }
-  return false;
 };
 
 export const loadFromHttpStorage = async (
@@ -127,12 +144,7 @@ export const loadFromHttpStorage = async (
   roomKey: string,
   socket: Socket | null,
 ): Promise<readonly SyncableExcalidrawElement[] | null> => {
-  const HTTP_STORAGE_BACKEND_URL = import.meta.env
-    .VITE_APP_HTTP_STORAGE_BACKEND_URL;
-  const getResponse = await fetch(
-    `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
-  );
-
+  const getResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`);
   const buffer = await getResponse.arrayBuffer();
   const elements = getSyncableElements(
     restoreElements(await getElementsFromBuffer(buffer, roomKey), null),
@@ -151,21 +163,10 @@ const getElementsFromBuffer = async (
 ): Promise<readonly ExcalidrawElement[]> => {
   // Buffer should contain both the IV (fixed length) and encrypted data
   const sceneVersion = parseSceneVersionFromRequest(buffer);
-  const iv = new Uint8Array(
-    buffer.slice(
-      SCENE_VERSION_LENGTH_BYTES,
-      IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES,
-    ),
-  );
-  const encrypted = buffer.slice(
-    IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES,
-    buffer.byteLength,
-  );
+  const iv = new Uint8Array(buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES));
+  const encrypted = buffer.slice(IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES, buffer.byteLength);
 
-  return await decryptElements(
-    { sceneVersion, ciphertext: encrypted, iv },
-    key,
-  );
+  return await decryptElements({ sceneVersion, ciphertext: encrypted, iv }, key);
 };
 
 export const saveFilesToHttpStorage = async ({
@@ -178,18 +179,12 @@ export const saveFilesToHttpStorage = async ({
   const erroredFiles: FileId[] = [];
   const savedFiles: FileId[] = [];
 
-  const HTTP_STORAGE_BACKEND_URL = import.meta.env
-    .VITE_APP_HTTP_STORAGE_BACKEND_URL;
-
   await Promise.all(
     files.map(async ({ id, buffer }) => {
       try {
         const payloadBlob = new Blob([buffer]);
         const payload = await new Response(payloadBlob).arrayBuffer();
-        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, {
-          method: "PUT",
-          body: payload,
-        });
+        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, { method: "PUT", body: payload });
         savedFiles.push(id);
       } catch (error: any) {
         erroredFiles.push(id);
@@ -208,25 +203,17 @@ export const loadFilesFromHttpStorage = async (
   const loadedFiles: BinaryFileData[] = [];
   const erroredFiles = new Map<FileId, true>();
 
-  //////////////
   await Promise.all(
     [...new Set(filesIds)].map(async (id) => {
       try {
-        const HTTP_STORAGE_BACKEND_URL = import.meta.env
-          .VITE_APP_HTTP_STORAGE_BACKEND_URL;
         const response = await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`);
         if (response.status < 400) {
           const arrayBuffer = await response.arrayBuffer();
-
           const { data, metadata } = await decompressData<BinaryFileMetadata>(
             new Uint8Array(arrayBuffer),
-            {
-              decryptionKey,
-            },
+            { decryptionKey },
           );
-
           const dataURL = new TextDecoder().decode(data) as DataURL;
-
           loadedFiles.push({
             mimeType: metadata.mimeType || MIME_TYPES.binary,
             id,
@@ -242,7 +229,6 @@ export const loadFilesFromHttpStorage = async (
       }
     }),
   );
-  //////
 
   return { loadedFiles, erroredFiles };
 };
@@ -259,17 +245,8 @@ const saveElementsToBackend = async (
   const numberBuffer = new ArrayBuffer(4);
   const numberView = new DataView(numberBuffer);
   numberView.setUint32(0, sceneVersion, false);
-  const sceneVersionBuffer = numberView.buffer;
-  const payloadBlob = await new Response(
-    new Blob([sceneVersionBuffer, iv.buffer, ciphertext]),
-  ).arrayBuffer();
-  const putResponse = await fetch(
-    `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
-    {
-      method: "PUT",
-      body: payloadBlob,
-    },
-  );
+  const payloadBlob = await new Response(new Blob([numberBuffer, iv.buffer, ciphertext])).arrayBuffer();
+  const putResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`, { method: "PUT", body: payloadBlob });
 
   return putResponse.ok;
 };
@@ -283,13 +260,8 @@ const decryptElements = async (
   data: StoredScene,
   roomKey: string,
 ): Promise<readonly ExcalidrawElement[]> => {
-  const ciphertext = data.ciphertext;
-  const iv = data.iv;
-
-  const decrypted = await decryptData(iv, ciphertext, roomKey);
-  const decodedData = new TextDecoder("utf-8").decode(
-    new Uint8Array(decrypted),
-  );
+  const decrypted = await decryptData(data.iv, data.ciphertext, roomKey);
+  const decodedData = new TextDecoder("utf-8").decode(new Uint8Array(decrypted));
   return JSON.parse(decodedData);
 };
 
@@ -297,9 +269,7 @@ const encryptElements = async (
   key: string,
   elements: readonly ExcalidrawElement[],
 ): Promise<{ ciphertext: ArrayBuffer; iv: Uint8Array }> => {
-  const json = JSON.stringify(elements);
-  const encoded = new TextEncoder().encode(json);
+  const encoded = new TextEncoder().encode(JSON.stringify(elements));
   const { encryptedBuffer, iv } = await encryptData(key, encoded);
-
   return { ciphertext: encryptedBuffer, iv };
 };
