@@ -5,23 +5,40 @@ import type { SyncableExcalidrawElement } from ".";
 import { getSyncableElements } from ".";
 import { MIME_TYPES } from "../../packages/excalidraw/constants";
 import { decompressData } from "../../packages/excalidraw/data/encode";
-import { encryptData, decryptData, IV_LENGTH_BYTES } from "../../packages/excalidraw/data/encryption";
+import {
+  encryptData,
+  decryptData,
+  IV_LENGTH_BYTES,
+} from "../../packages/excalidraw/data/encryption";
 import { restoreElements } from "../../packages/excalidraw/data/restore";
 import { getSceneVersion } from "../../packages/excalidraw/element";
-import type { ExcalidrawElement, FileId, OrderedExcalidrawElement } from "../../packages/excalidraw/element/types";
-import type { AppState, BinaryFileData, BinaryFileMetadata, DataURL } from "../../packages/excalidraw/types";
+import type {
+  ExcalidrawElement,
+  FileId,
+  OrderedExcalidrawElement,
+} from "../../packages/excalidraw/element/types";
+import type {
+  AppState,
+  BinaryFileData,
+  BinaryFileMetadata,
+  DataURL,
+} from "../../packages/excalidraw/types";
 import type Portal from "../collab/Portal";
 import type { RemoteExcalidrawElement } from "../../packages/excalidraw/data/reconcile";
 import { reconcileElements } from "../../packages/excalidraw/data/reconcile";
 import type { StoredScene } from "./StorageBackend";
 import type { Socket } from "socket.io-client";
 
-const HTTP_STORAGE_BACKEND_URL = import.meta.env.VITE_APP_HTTP_STORAGE_BACKEND_URL;
+const HTTP_STORAGE_BACKEND_URL = import.meta.env
+  .VITE_APP_HTTP_STORAGE_BACKEND_URL;
 const SCENE_VERSION_LENGTH_BYTES = 4;
 
 const httpStorageSceneVersionCache = new WeakMap<Socket, number>();
 
-export const isSavedToHttpStorage = (portal: Portal, elements: readonly ExcalidrawElement[]): boolean => {
+export const isSavedToHttpStorage = (
+  portal: Portal,
+  elements: readonly ExcalidrawElement[],
+): boolean => {
   if (portal.socket && portal.roomId && portal.roomKey) {
     const sceneVersion = getSceneVersion(elements);
     return httpStorageSceneVersionCache.get(portal.socket) === sceneVersion;
@@ -29,17 +46,30 @@ export const isSavedToHttpStorage = (portal: Portal, elements: readonly Excalidr
   return true;
 };
 
-export const saveToHttpStorage = async (portal: Portal, elements: readonly SyncableExcalidrawElement[], appState: AppState) => {
+export const saveToHttpStorage = async (
+  portal: Portal,
+  elements: readonly SyncableExcalidrawElement[],
+  appState: AppState,
+) => {
   const { roomId, roomKey, socket } = portal;
-  if (!roomId || !roomKey || !socket || isSavedToHttpStorage(portal, elements)) return false;
+  if (!roomId || !roomKey || !socket || isSavedToHttpStorage(portal, elements)) {
+    return false;
+  }
 
   const sceneVersion = getSceneVersion(elements);
   const getResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`);
 
-  if (!getResponse.ok && getResponse.status !== 404) return false;
+  if (!getResponse.ok && getResponse.status !== 404) {
+    return false;
+  }
 
   if (getResponse.status === 404) {
-    const result = await saveElementsToBackend(roomKey, roomId, [...elements], sceneVersion);
+    const result: boolean = await saveElementsToBackend(
+      roomKey,
+      roomId,
+      [...elements],
+      sceneVersion,
+    );
     if (result) {
       console.debug("[httpStorage] Created new room, cache updated", { roomId, sceneVersion });
       httpStorageSceneVersionCache.set(socket, sceneVersion);
@@ -52,28 +82,25 @@ export const saveToHttpStorage = async (portal: Portal, elements: readonly Synca
   const sceneVersionFromRequest = parseSceneVersionFromRequest(buffer);
 
   if (sceneVersionFromRequest >= sceneVersion) {
-    // KeepAlive Log
     console.debug("[httpStorage] Keepalive/Fallback PUT → syncing with server", {
       roomId,
       localSceneVersion: sceneVersion,
       serverSceneVersion: sceneVersionFromRequest,
     });
 
-    // Fallback PUT: reconciling old room with server
     const existingElements = await getElementsFromBuffer(buffer, roomKey);
     const reconciledElements = getSyncableElements(
       reconcileElements(
         [...elements] as unknown as RemoteExcalidrawElement[],
         [...existingElements] as unknown as RemoteExcalidrawElement[],
-        appState
-      )
+        appState,
+      ),
     );
 
     const newSceneVersion = sceneVersionFromRequest + 1;
     const result = await saveElementsToBackend(roomKey, roomId, reconciledElements, newSceneVersion);
 
     if (result) {
-      // Resultat loggen
       console.debug("[httpStorage] Fallback PUT succeeded, cache updated", {
         roomId,
         sceneVersion: newSceneVersion,
@@ -81,10 +108,7 @@ export const saveToHttpStorage = async (portal: Portal, elements: readonly Synca
       httpStorageSceneVersionCache.set(socket, newSceneVersion);
       return reconciledElements;
     } else {
-      console.warn("[httpStorage] Fallback PUT failed", {
-        roomId,
-        newSceneVersion,
-      });
+      console.warn("[httpStorage] Fallback PUT failed", { roomId, newSceneVersion });
       return false;
     }
   }
@@ -94,8 +118,8 @@ export const saveToHttpStorage = async (portal: Portal, elements: readonly Synca
     reconcileElements(
       [...elements] as unknown as RemoteExcalidrawElement[],
       [...existingElements] as unknown as RemoteExcalidrawElement[],
-      appState
-    )
+      appState,
+    ),
   );
 
   const result = await saveElementsToBackend(roomKey, roomId, reconciledElements, sceneVersion);
@@ -109,7 +133,11 @@ export const saveToHttpStorage = async (portal: Portal, elements: readonly Synca
   }
 };
 
-export const loadFromHttpStorage = async (roomId: string, roomKey: string, socket: Socket | null): Promise<readonly SyncableExcalidrawElement[] | null> => {
+export const loadFromHttpStorage = async (
+  roomId: string,
+  roomKey: string,
+  socket: Socket | null,
+): Promise<readonly SyncableExcalidrawElement[] | null> => {
   const getResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`);
   const buffer = await getResponse.arrayBuffer();
   const elements = getSyncableElements(
@@ -118,14 +146,25 @@ export const loadFromHttpStorage = async (roomId: string, roomKey: string, socke
   return elements;
 };
 
-const getElementsFromBuffer = async (buffer: ArrayBuffer, key: string): Promise<readonly ExcalidrawElement[]> => {
+const getElementsFromBuffer = async (
+  buffer: ArrayBuffer,
+  key: string,
+): Promise<readonly ExcalidrawElement[]> => {
   const sceneVersion = parseSceneVersionFromRequest(buffer);
-  const iv = new Uint8Array(buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES));
+  const iv = new Uint8Array(
+    buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES),
+  );
   const encrypted = buffer.slice(IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES, buffer.byteLength);
   return await decryptElements({ sceneVersion, ciphertext: encrypted, iv }, key);
 };
 
-export const saveFilesToHttpStorage = async ({ prefix, files }: { prefix: string; files: { id: FileId; buffer: Uint8Array }[] }) => {
+export const saveFilesToHttpStorage = async ({
+  prefix,
+  files,
+}: {
+  prefix: string;
+  files: { id: FileId; buffer: Uint8Array }[];
+}) => {
   const erroredFiles: FileId[] = [];
   const savedFiles: FileId[] = [];
 
@@ -145,7 +184,11 @@ export const saveFilesToHttpStorage = async ({ prefix, files }: { prefix: string
   return { savedFiles, erroredFiles };
 };
 
-export const loadFilesFromHttpStorage = async (prefix: string, decryptionKey: string, filesIds: readonly FileId[]) => {
+export const loadFilesFromHttpStorage = async (
+  prefix: string,
+  decryptionKey: string,
+  filesIds: readonly FileId[],
+) => {
   const loadedFiles: BinaryFileData[] = [];
   const erroredFiles = new Map<FileId, true>();
 
@@ -157,7 +200,12 @@ export const loadFilesFromHttpStorage = async (prefix: string, decryptionKey: st
           const arrayBuffer = await response.arrayBuffer();
           const { data, metadata } = await decompressData<BinaryFileMetadata>(new Uint8Array(arrayBuffer), { decryptionKey });
           const dataURL = new TextDecoder().decode(data) as DataURL;
-          loadedFiles.push({ mimeType: metadata.mimeType || MIME_TYPES.binary, id, dataURL, created: metadata?.created || Date.now() });
+          loadedFiles.push({
+            mimeType: metadata.mimeType || MIME_TYPES.binary,
+            id,
+            dataURL,
+            created: metadata?.created || Date.now(),
+          });
         } else {
           erroredFiles.set(id, true);
         }
@@ -171,7 +219,12 @@ export const loadFilesFromHttpStorage = async (prefix: string, decryptionKey: st
   return { loadedFiles, erroredFiles };
 };
 
-const saveElementsToBackend = async (roomKey: string, roomId: string, elements: SyncableExcalidrawElement[], sceneVersion: number) => {
+const saveElementsToBackend = async (
+  roomKey: string,
+  roomId: string,
+  elements: SyncableExcalidrawElement[],
+  sceneVersion: number,
+) => {
   const { ciphertext, iv } = await encryptElements(roomKey, elements);
   const numberBuffer = new ArrayBuffer(4);
   const numberView = new DataView(numberBuffer);
