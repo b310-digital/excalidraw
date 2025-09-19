@@ -35,6 +35,8 @@ const SCENE_VERSION_LENGTH_BYTES = 4;
 
 const httpStorageSceneVersionCache = new WeakMap<Socket, number>();
 
+// ─────────────────────────────────────────────
+// Helper: Kontrollera om rummet redan sparats
 export const isSavedToHttpStorage = (
   portal: Portal,
   elements: readonly ExcalidrawElement[],
@@ -46,6 +48,34 @@ export const isSavedToHttpStorage = (
   return true;
 };
 
+// ─────────────────────────────────────────────
+// PATCH /files/:id/timestamp helper
+export const touchFilesInHttpStorage = async (
+  filesIds: readonly FileId[],
+) => {
+  const touchedFiles: FileId[] = [];
+  const erroredFiles: FileId[] = [];
+
+  await Promise.all(
+    [...new Set(filesIds)].map(async (id) => {
+      try {
+        const response = await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}/timestamp`, {
+          method: "PATCH",
+        });
+        if (response.ok) touchedFiles.push(id);
+        else erroredFiles.push(id);
+      } catch (error) {
+        console.error(`[httpStorage] Failed to touch file ${id}`, error);
+        erroredFiles.push(id);
+      }
+    }),
+  );
+
+  return { touchedFiles, erroredFiles };
+};
+
+// ─────────────────────────────────────────────
+// Spara rummet och uppdatera filer
 export const saveToHttpStorage = async (
   portal: Portal,
   elements: readonly SyncableExcalidrawElement[],
@@ -63,6 +93,7 @@ export const saveToHttpStorage = async (
     return false;
   }
 
+  // Skapa nytt rum om 404
   if (getResponse.status === 404) {
     const result: boolean = await saveElementsToBackend(
       roomKey,
@@ -73,6 +104,13 @@ export const saveToHttpStorage = async (
     if (result) {
       console.debug("[httpStorage] Created new room, cache updated", { roomId, sceneVersion });
       httpStorageSceneVersionCache.set(socket, sceneVersion);
+
+      // 🔥 Touch alla filer
+      if (appState.files) {
+        const fileIds = Object.keys(appState.files) as FileId[];
+        await touchFilesInHttpStorage(fileIds);
+      }
+
       return elements;
     }
     return false;
@@ -81,6 +119,7 @@ export const saveToHttpStorage = async (
   const buffer = await getResponse.arrayBuffer();
   const sceneVersionFromRequest = parseSceneVersionFromRequest(buffer);
 
+  // Fallback PUT om server har nyare version
   if (sceneVersionFromRequest >= sceneVersion) {
     console.debug("[httpStorage] Keepalive/Fallback PUT → syncing with server", {
       roomId,
@@ -106,6 +145,13 @@ export const saveToHttpStorage = async (
         sceneVersion: newSceneVersion,
       });
       httpStorageSceneVersionCache.set(socket, newSceneVersion);
+
+      // 🔥 Touch alla filer
+      if (appState.files) {
+        const fileIds = Object.keys(appState.files) as FileId[];
+        await touchFilesInHttpStorage(fileIds);
+      }
+
       return reconciledElements;
     } else {
       console.warn("[httpStorage] Fallback PUT failed", { roomId, newSceneVersion });
@@ -113,6 +159,7 @@ export const saveToHttpStorage = async (
     }
   }
 
+  // Normal PUT
   const existingElements = await getElementsFromBuffer(buffer, roomKey);
   const reconciledElements = getSyncableElements(
     reconcileElements(
@@ -126,6 +173,13 @@ export const saveToHttpStorage = async (
   if (result) {
     console.debug("[httpStorage] PUT succeeded, cache updated", { roomId, sceneVersion });
     httpStorageSceneVersionCache.set(socket, sceneVersion);
+
+    // 🔥 Touch alla filer
+    if (appState.files) {
+      const fileIds = Object.keys(appState.files) as FileId[];
+      await touchFilesInHttpStorage(fileIds);
+    }
+
     return elements;
   } else {
     console.warn("[httpStorage] PUT failed", { roomId, sceneVersion });
@@ -133,6 +187,8 @@ export const saveToHttpStorage = async (
   }
 };
 
+// ─────────────────────────────────────────────
+// Ladda rummet
 export const loadFromHttpStorage = async (
   roomId: string,
   roomKey: string,
@@ -146,44 +202,8 @@ export const loadFromHttpStorage = async (
   return elements;
 };
 
-const getElementsFromBuffer = async (
-  buffer: ArrayBuffer,
-  key: string,
-): Promise<readonly ExcalidrawElement[]> => {
-  const sceneVersion = parseSceneVersionFromRequest(buffer);
-  const iv = new Uint8Array(
-    buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES),
-  );
-  const encrypted = buffer.slice(IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES, buffer.byteLength);
-  return await decryptElements({ sceneVersion, ciphertext: encrypted, iv }, key);
-};
-
-export const saveFilesToHttpStorage = async ({
-  prefix,
-  files,
-}: {
-  prefix: string;
-  files: { id: FileId; buffer: Uint8Array }[];
-}) => {
-  const erroredFiles: FileId[] = [];
-  const savedFiles: FileId[] = [];
-
-  await Promise.all(
-    files.map(async ({ id, buffer }) => {
-      try {
-        const payloadBlob = new Blob([buffer]);
-        const payload = await new Response(payloadBlob).arrayBuffer();
-        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, { method: "PUT", body: payload });
-        savedFiles.push(id);
-      } catch (error: any) {
-        erroredFiles.push(id);
-      }
-    }),
-  );
-
-  return { savedFiles, erroredFiles };
-};
-
+// ─────────────────────────────────────────────
+// Ladda filer
 export const loadFilesFromHttpStorage = async (
   prefix: string,
   decryptionKey: string,
@@ -219,6 +239,50 @@ export const loadFilesFromHttpStorage = async (
   return { loadedFiles, erroredFiles };
 };
 
+// ─────────────────────────────────────────────
+// Spara filer
+export const saveFilesToHttpStorage = async ({
+  prefix,
+  files,
+}: {
+  prefix: string;
+  files: { id: FileId; buffer: Uint8Array }[];
+}) => {
+  const erroredFiles: FileId[] = [];
+  const savedFiles: FileId[] = [];
+
+  await Promise.all(
+    files.map(async ({ id, buffer }) => {
+      try {
+        const payloadBlob = new Blob([buffer]);
+        const payload = await new Response(payloadBlob).arrayBuffer();
+        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, { method: "PUT", body: payload });
+        savedFiles.push(id);
+      } catch (error: any) {
+        erroredFiles.push(id);
+      }
+    }),
+  );
+
+  return { savedFiles, erroredFiles };
+};
+
+// ─────────────────────────────────────────────
+// Internt: hämta element från buffer
+const getElementsFromBuffer = async (
+  buffer: ArrayBuffer,
+  key: string,
+): Promise<readonly ExcalidrawElement[]> => {
+  const sceneVersion = parseSceneVersionFromRequest(buffer);
+  const iv = new Uint8Array(
+    buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES),
+  );
+  const encrypted = buffer.slice(IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES, buffer.byteLength);
+  return await decryptElements({ sceneVersion, ciphertext: encrypted, iv }, key);
+};
+
+// ─────────────────────────────────────────────
+// Internt: spara element till backend
 const saveElementsToBackend = async (
   roomKey: string,
   roomId: string,
@@ -234,17 +298,23 @@ const saveElementsToBackend = async (
   return putResponse.ok;
 };
 
+// ─────────────────────────────────────────────
+// Internt: parse scene version
 const parseSceneVersionFromRequest = (buffer: ArrayBuffer) => {
   const view = new DataView(buffer);
   return view.getUint32(0, false);
 };
 
+// ─────────────────────────────────────────────
+// Internt: decrypt
 const decryptElements = async (data: StoredScene, roomKey: string): Promise<readonly ExcalidrawElement[]> => {
   const decrypted = await decryptData(data.iv, data.ciphertext, roomKey);
   const decodedData = new TextDecoder("utf-8").decode(new Uint8Array(decrypted));
   return JSON.parse(decodedData);
 };
 
+// ─────────────────────────────────────────────
+// Internt: encrypt
 const encryptElements = async (key: string, elements: readonly ExcalidrawElement[]): Promise<{ ciphertext: ArrayBuffer; iv: Uint8Array }> => {
   const encoded = new TextEncoder().encode(JSON.stringify(elements));
   const { encryptedBuffer, iv } = await encryptData(key, encoded);
