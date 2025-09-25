@@ -14,7 +14,7 @@ import { restoreElements } from "../../packages/excalidraw/data/restore";
 import { getSceneVersion } from "../../packages/excalidraw/element";
 import type {
   ExcalidrawElement,
-  FileId
+  FileId,
 } from "../../packages/excalidraw/element/types";
 import type {
   AppState,
@@ -32,9 +32,6 @@ const HTTP_STORAGE_BACKEND_URL = import.meta.env
   .VITE_APP_HTTP_STORAGE_BACKEND_URL;
 const SCENE_VERSION_LENGTH_BYTES = 4;
 
-// There is a lot of intentional duplication with the firebase file
-// to prevent modifying upstream files and ease future maintenance of this fork
-
 const httpStorageSceneVersionCache = new WeakMap<Socket, number>();
 
 export const isSavedToHttpStorage = (
@@ -45,8 +42,6 @@ export const isSavedToHttpStorage = (
     const sceneVersion = getSceneVersion(elements);
     return httpStorageSceneVersionCache.get(portal.socket) === sceneVersion;
   }
-  // if no room exists, consider the room saved so that we don't unnecessarily
-  // prevent unload (there's nothing we could do at that point anyway)
   return true;
 };
 
@@ -56,86 +51,100 @@ export const saveToHttpStorage = async (
   appState: AppState,
 ) => {
   const { roomId, roomKey, socket } = portal;
-  // if no room exists, consider the room saved because there's nothing we can
-  // do at this point
-  if (!roomId || !roomKey || !socket || isSavedToHttpStorage(portal, elements)) {
+  if (
+    !roomId ||
+    !roomKey ||
+    !socket ||
+    isSavedToHttpStorage(portal, elements)
+  ) {
     return false;
   }
 
   const sceneVersion = getSceneVersion(elements);
-  const getResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`);
+  const getResponse = await fetch(
+    `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
+  );
 
-  if (!getResponse.ok && getResponse.status !== 404) return false;
+  if (!getResponse.ok && getResponse.status !== 404) {
+    return false;
+  }
 
   if (getResponse.status === 404) {
-    // Room does not exist → create new room
-    const result = await saveElementsToBackend(roomKey, roomId, [...elements], sceneVersion);
+    const result = await saveElementsToBackend(
+      roomKey,
+      roomId,
+      [...elements],
+      sceneVersion,
+    );
     if (result) {
-      console.debug("[httpStorage] Created new room, cache updated", { roomId, sceneVersion });
       httpStorageSceneVersionCache.set(socket, sceneVersion);
+
+      refreshRoomFilesTimestamps(roomId, roomKey).catch((err) =>
+        console.error("[refresh] Failed", err),
+      );
+
       return elements;
     }
     return false;
   }
 
-  // Room exists → check scene versions
   const buffer = await getResponse.arrayBuffer();
   const sceneVersionFromRequest = parseSceneVersionFromRequest(buffer);
 
   if (sceneVersionFromRequest >= sceneVersion) {
-    // KeepAlive Log
-    console.debug("[httpStorage] Keepalive/Fallback PUT → syncing with server", {
-      roomId,
-      localSceneVersion: sceneVersion,
-      serverSceneVersion: sceneVersionFromRequest,
-    });
-
     // Fallback PUT: reconciling old room with server
     const existingElements = await getElementsFromBuffer(buffer, roomKey);
     const reconciledElements = getSyncableElements(
       reconcileElements(
         [...elements] as unknown as RemoteExcalidrawElement[],
         [...existingElements] as unknown as RemoteExcalidrawElement[],
-        appState
-      )
+        appState,
+      ),
     );
 
     const newSceneVersion = sceneVersionFromRequest + 1;
-    const result = await saveElementsToBackend(roomKey, roomId, reconciledElements, newSceneVersion);
+    const result = await saveElementsToBackend(
+      roomKey,
+      roomId,
+      reconciledElements,
+      newSceneVersion,
+    );
 
     if (result) {
-      // Result log
-      console.debug("[httpStorage] Fallback PUT succeeded, cache updated", {
-        roomId,
-        sceneVersion: newSceneVersion,
-      });
       httpStorageSceneVersionCache.set(socket, newSceneVersion);
       return reconciledElements;
-    } else {
-      console.warn("[httpStorage] Fallback PUT failed", { roomId, newSceneVersion });
-      return false;
     }
+    console.warn("[httpStorage] Fallback PUT failed", {
+      roomId,
+      newSceneVersion,
+    });
+    return false;
   }
 
-  // Normal PUT: reconcile with existing elements
   const existingElements = await getElementsFromBuffer(buffer, roomKey);
   const reconciledElements = getSyncableElements(
     reconcileElements(
       [...elements] as unknown as RemoteExcalidrawElement[],
       [...existingElements] as unknown as RemoteExcalidrawElement[],
-      appState
-    )
+      appState,
+    ),
   );
 
-  const result = await saveElementsToBackend(roomKey, roomId, reconciledElements, sceneVersion);
+  const result = await saveElementsToBackend(
+    roomKey,
+    roomId,
+    reconciledElements,
+    sceneVersion,
+  );
   if (result) {
-    console.debug("[httpStorage] PUT succeeded, cache updated", { roomId, sceneVersion });
     httpStorageSceneVersionCache.set(socket, sceneVersion);
+    refreshRoomFilesTimestamps(roomId, roomKey).catch((err) =>
+      console.error("[refresh] Failed", err),
+    );
     return elements;
-  } else {
-    console.warn("[httpStorage] PUT failed", { roomId, sceneVersion });
-    return false;
   }
+  console.warn("[httpStorage] PUT failed", { roomId, sceneVersion });
+  return false;
 };
 
 export const loadFromHttpStorage = async (
@@ -143,16 +152,13 @@ export const loadFromHttpStorage = async (
   roomKey: string,
   socket: Socket | null,
 ): Promise<readonly SyncableExcalidrawElement[] | null> => {
-  const getResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`);
+  const getResponse = await fetch(
+    `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
+  );
   const buffer = await getResponse.arrayBuffer();
   const elements = getSyncableElements(
     restoreElements(await getElementsFromBuffer(buffer, roomKey), null),
   );
-
-  if (socket) {
-    httpStorageSceneVersionCache.set(socket, getSceneVersion(elements));
-  }
-
   return elements;
 };
 
@@ -160,12 +166,21 @@ const getElementsFromBuffer = async (
   buffer: ArrayBuffer,
   key: string,
 ): Promise<readonly ExcalidrawElement[]> => {
-  // Buffer should contain both the IV (fixed length) and encrypted data
   const sceneVersion = parseSceneVersionFromRequest(buffer);
-  const iv = new Uint8Array(buffer.slice(SCENE_VERSION_LENGTH_BYTES, IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES));
-  const encrypted = buffer.slice(IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES, buffer.byteLength);
-
-  return await decryptElements({ sceneVersion, ciphertext: encrypted, iv }, key);
+  const iv = new Uint8Array(
+    buffer.slice(
+      SCENE_VERSION_LENGTH_BYTES,
+      IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES,
+    ),
+  );
+  const encrypted = buffer.slice(
+    IV_LENGTH_BYTES + SCENE_VERSION_LENGTH_BYTES,
+    buffer.byteLength,
+  );
+  return await decryptElements(
+    { sceneVersion, ciphertext: encrypted, iv },
+    key,
+  );
 };
 
 export const saveFilesToHttpStorage = async ({
@@ -183,7 +198,10 @@ export const saveFilesToHttpStorage = async ({
       try {
         const payloadBlob = new Blob([buffer]);
         const payload = await new Response(payloadBlob).arrayBuffer();
-        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, { method: "PUT", body: payload });
+        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, {
+          method: "PUT",
+          body: payload,
+        });
         savedFiles.push(id);
       } catch (error: any) {
         erroredFiles.push(id);
@@ -239,14 +257,20 @@ const saveElementsToBackend = async (
   sceneVersion: number,
 ) => {
   const { ciphertext, iv } = await encryptElements(roomKey, elements);
-
-  // Concatenate Scene Version, IV with encrypted data (IV does not have to be secret).
   const numberBuffer = new ArrayBuffer(4);
   const numberView = new DataView(numberBuffer);
   numberView.setUint32(0, sceneVersion, false);
-  const payloadBlob = await new Response(new Blob([numberBuffer, iv.buffer, ciphertext])).arrayBuffer();
-  const putResponse = await fetch(`${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`, { method: "PUT", body: payloadBlob });
-
+  const payloadBlob = await new Response(
+    new Blob([
+      numberBuffer,
+      new Uint8Array(iv.buffer),
+      new Uint8Array(ciphertext),
+    ]),
+  ).arrayBuffer();
+  const putResponse = await fetch(
+    `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
+    { method: "PUT", body: payloadBlob },
+  );
   return putResponse.ok;
 };
 
@@ -260,7 +284,9 @@ const decryptElements = async (
   roomKey: string,
 ): Promise<readonly ExcalidrawElement[]> => {
   const decrypted = await decryptData(data.iv, data.ciphertext, roomKey);
-  const decodedData = new TextDecoder("utf-8").decode(new Uint8Array(decrypted));
+  const decodedData = new TextDecoder("utf-8").decode(
+    new Uint8Array(decrypted),
+  );
   return JSON.parse(decodedData);
 };
 
@@ -271,4 +297,60 @@ const encryptElements = async (
   const encoded = new TextEncoder().encode(JSON.stringify(elements));
   const { encryptedBuffer, iv } = await encryptData(key, encoded);
   return { ciphertext: encryptedBuffer, iv };
+};
+
+// Typ predicate for image elements with fileId
+const isImageElementWithFileId = (
+  el: SyncableExcalidrawElement,
+): el is SyncableExcalidrawElement & { fileId: string } =>
+  el.type === "image" && !!(el as any).fileId;
+
+// Update timestamps for all images in a room
+export const refreshRoomFilesTimestamps = async (
+  roomId: string,
+  roomKey: string,
+) => {
+  const elements = await loadFromHttpStorage(roomId, roomKey, null);
+  if (!elements) {
+    console.warn(`[refresh] No elements found for room ${roomId}`);
+    return { refreshed: [], errored: [] };
+  }
+
+  const fileIds = [
+    ...new Set(
+      elements.filter(isImageElementWithFileId).map((el) => el.fileId),
+    ),
+  ];
+  const refreshed: string[] = [];
+  const errored: string[] = [];
+
+  for (const id of fileIds) {
+    try {
+      const patchRes = await fetch(
+        `${HTTP_STORAGE_BACKEND_URL}/files/${id}/timestamp`,
+        {
+          method: "PATCH",
+        },
+      );
+
+      try {
+        await patchRes.json();
+      } catch {
+        console.warn(`[refresh] PATCH-response for ${id} no JSON-body`);
+      }
+
+      if (!patchRes.ok) {
+        console.warn(`[refresh] PATCH failed for ${id}`);
+        errored.push(id);
+        continue;
+      }
+
+      refreshed.push(id);
+    } catch (err) {
+      console.error(`[refresh] Unable to PATCH:a file ${id}`, err);
+      errored.push(id);
+    }
+  }
+
+  return { refreshed, errored };
 };
