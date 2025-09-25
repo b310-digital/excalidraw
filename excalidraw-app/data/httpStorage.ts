@@ -14,8 +14,7 @@ import { restoreElements } from "../../packages/excalidraw/data/restore";
 import { getSceneVersion } from "../../packages/excalidraw/element";
 import type {
   ExcalidrawElement,
-  FileId,
-  OrderedExcalidrawElement,
+  FileId
 } from "../../packages/excalidraw/element/types";
 import type {
   AppState,
