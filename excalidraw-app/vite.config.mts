@@ -8,6 +8,8 @@ import checker from "vite-plugin-checker";
 import { createHtmlPlugin } from "vite-plugin-html";
 import Sitemap from "vite-plugin-sitemap";
 import { woff2BrowserPlugin } from "../scripts/woff2/woff2-vite-plugins";
+import basicSsl from '@vitejs/plugin-basic-ssl'
+
 export default defineConfig(({ mode }) => {
   // To load .env variables
   const envVars = loadEnv(mode, `../`);
@@ -15,12 +17,16 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       port: Number(envVars.VITE_APP_PORT || 3000),
+      host: true, // listen on all addresses
       // open the browser
       open: false,
     },
     // We need to specify the envDir since now there are no
     //more located in parallel with the vite.config.ts file but in parent dir
     envDir: "../",
+    css: {
+      devSourcemap: true,
+    },
     resolve: {
       alias: [
         {
@@ -113,7 +119,6 @@ export default defineConfig(({ mode }) => {
 
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 ** 2,
-          
           // don't precache fonts, locales and separate chunks
           globIgnores: [
             "fonts.css",
@@ -199,7 +204,7 @@ export default defineConfig(({ mode }) => {
             },
           ],
           start_url: "/",
-          id:"excalidraw",
+          id: "excalidraw",
           display: "standalone",
           theme_color: "#121212",
           background_color: "#ffffff",
@@ -265,6 +270,7 @@ export default defineConfig(({ mode }) => {
       createHtmlPlugin({
         minify: true,
       }),
+      basicSsl()
     ],
     publicDir: "../public",
   };

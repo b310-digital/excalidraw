@@ -51,6 +51,7 @@
     "build:preview": "yarn build && vite preview --port 5000"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "2.1.0",
     "vite-plugin-sitemap": "0.7.1"
   }
 }
