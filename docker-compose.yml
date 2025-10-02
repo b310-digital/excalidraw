@@ -23,8 +23,8 @@ services:
       # When testing locally, you can also checkout the repository and start the backend manually:
       # context: ../kits/excalidraw-storage-backend
       # target: development
-    # volumes:
-    #   - ../kits/excalidraw-storage-backend/:/home/node/app
+      # volumes:
+      #   - ../kits/excalidraw-storage-backend/:/home/node/app
     stdin_open: true
     ports:
       - "8080:8080"
@@ -32,7 +32,8 @@ services:
       STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-excalidraw-dev}
 
   excalidraw-room:
-    image: excalidraw/excalidraw-room
+    build:
+      context: https://github.com/b310-digital/excalidraw-room.git#master
     ports:
       - "5001:80"
 
