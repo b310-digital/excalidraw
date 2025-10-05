@@ -101,7 +101,8 @@ export const saveToHttpStorage = async (
         console.error("[refresh] Failed", err),
       );
 
-      return elements;
+      // Return what was saved for consistency with other paths
+      return [...elements];
     }
     return false;
   }

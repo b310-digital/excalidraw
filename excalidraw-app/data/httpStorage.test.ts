@@ -19,12 +19,21 @@ vi.mock("../../packages/excalidraw/data/encryption", () => ({
     encryptedBuffer: new ArrayBuffer(16),
     iv: new Uint8Array(12),
   })),
-  decryptData: vi.fn(async () => new ArrayBuffer(0)),
+  decryptData: vi.fn(async () => {
+    // Return valid JSON string as ArrayBuffer
+    const jsonString = JSON.stringify([]);
+    const encoder = new TextEncoder();
+    return encoder.encode(jsonString).buffer;
+  }),
   IV_LENGTH_BYTES: 12,
 }));
 
 vi.mock("../../packages/excalidraw/data/restore", () => ({
   restoreElements: vi.fn((elements) => elements),
+}));
+
+vi.mock("../../packages/excalidraw/data/encode", () => ({
+  decompressData: vi.fn(async (data) => data), // Pass through
 }));
 
 describe("httpStorage - Critical Issues", () => {
@@ -85,7 +94,7 @@ describe("httpStorage - Critical Issues", () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
-    it("should return elements in normal path", async () => {
+    it("should return reconciledElements in normal path (FIXED)", async () => {
       const sceneVersion = getSceneVersion(mockElements);
       const serverVersion = sceneVersion - 1;
 
@@ -111,8 +120,11 @@ describe("httpStorage - Critical Issues", () => {
         mockAppState,
       );
 
-      // ISSUE: Normal path returns original elements, not reconciled
-      expect(result).toBe(mockElements);
+      // FIXED: Normal path now also returns reconciledElements for consistency
+      expect(result).not.toBe(false);
+      expect(Array.isArray(result)).toBe(true);
+      // The result should be the reconciled elements, not the original elements
+      expect(result).not.toBe(mockElements);
     });
   });
 
@@ -139,6 +151,32 @@ describe("httpStorage - Critical Issues", () => {
       // ISSUE: Both succeed - last write wins, potential data loss
       expect(result1).not.toBe(false);
       expect(result2).not.toBe(false);
+    });
+  });
+
+  describe("✅ Issue 1 Fix: 404 Path Consistency", () => {
+    it("should return new array in 404 path (new room)", async () => {
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+        });
+
+      const result = await saveToHttpStorage(
+        mockPortal,
+        mockElements,
+        mockAppState,
+      );
+
+      // FIXED: 404 path now returns a new array for consistency
+      expect(result).not.toBe(false);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).not.toBe(mockElements); // Should be new array
     });
   });
 });
