@@ -45,6 +45,24 @@ export const isSavedToHttpStorage = (
   return true;
 };
 
+/**
+ * Saves elements to HTTP storage backend with reconciliation logic.
+ *
+ * Behavior:
+ * - If room doesn't exist (404): Creates new room with current elements
+ * - If server version >= local: Reconciles with server and saves with version + 1
+ * - If server version < local: Reconciles with server and saves with current version
+ *
+ * ⚠️ KNOWN LIMITATION: Race conditions possible with concurrent saves
+ * Multiple clients may overwrite each other's changes (last write wins).
+ * This is a known trade-off for simplicity. For production use with high
+ * concurrency, consider implementing optimistic locking at the server level.
+ *
+ * @param portal - Portal with room connection details
+ * @param elements - Elements to save
+ * @param appState - Current app state for reconciliation
+ * @returns The reconciled elements that were saved, or false if save failed
+ */
 export const saveToHttpStorage = async (
   portal: Portal,
   elements: readonly SyncableExcalidrawElement[],
@@ -141,7 +159,9 @@ export const saveToHttpStorage = async (
     refreshRoomFilesTimestamps(roomId, roomKey).catch((err) =>
       console.error("[refresh] Failed", err),
     );
-    return elements;
+    // FIX: Return reconciled elements (what was actually saved)
+    // instead of original elements for consistency
+    return reconciledElements;
   }
   console.warn("[httpStorage] PUT failed", { roomId, sceneVersion });
   return false;
