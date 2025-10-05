@@ -209,7 +209,7 @@ export const saveFilesToHttpStorage = async ({
   files,
 }: {
   prefix: string;
-  files: { id: FileId; buffer: Uint8Array }[];
+  files: { id: FileId; buffer: Uint8Array<ArrayBuffer> }[];
 }) => {
   const erroredFiles: FileId[] = [];
   const savedFiles: FileId[] = [];
@@ -281,12 +281,11 @@ const saveElementsToBackend = async (
   const numberBuffer = new ArrayBuffer(4);
   const numberView = new DataView(numberBuffer);
   numberView.setUint32(0, sceneVersion, false);
+  // Create typed arrays that TypeScript can infer correctly
+  const ivArray = Uint8Array.from(iv);
+  const cipherArray = new Uint8Array(ciphertext);
   const payloadBlob = await new Response(
-    new Blob([
-      numberBuffer,
-      new Uint8Array(iv.buffer),
-      new Uint8Array(ciphertext),
-    ]),
+    new Blob([numberBuffer, ivArray, cipherArray]),
   ).arrayBuffer();
   const putResponse = await fetch(
     `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
