@@ -208,7 +208,7 @@ export const saveFilesToHttpStorage = async ({
   files,
 }: {
   prefix: string;
-  files: { id: FileId; buffer: Uint8Array<ArrayBuffer> }[];
+  files: { id: FileId; buffer: Uint8Array }[];
 }) => {
   const erroredFiles: FileId[] = [];
   const savedFiles: FileId[] = [];
