@@ -1,6 +1,8 @@
 name: Test Coverage PR
 on:
   pull_request:
+  branch:
+    - master
 
 jobs:
   coverage:
