@@ -6,7 +6,6 @@ on:
     branches:
       - master
 
-
 jobs:
   lint:
     runs-on: ubuntu-latest
