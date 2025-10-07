@@ -55,8 +55,7 @@ export const isSavedToHttpStorage = (
  *
  * ⚠️ KNOWN LIMITATION: Race conditions possible with concurrent saves
  * Multiple clients may overwrite each other's changes (last write wins).
- * This is a known trade-off for simplicity. For production use with high
- * concurrency, consider implementing optimistic locking at the server level.
+ * This is a known trade-off for simplicity.
  *
  * @param portal - Portal with room connection details
  * @param elements - Elements to save

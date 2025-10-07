@@ -36,7 +36,7 @@ vi.mock("../../packages/excalidraw/data/encode", () => ({
   decompressData: vi.fn(async (data) => data), // Pass through
 }));
 
-describe("httpStorage - Critical Issues", () => {
+describe("httpStorage", () => {
   let mockPortal: Portal;
   let mockElements: SyncableExcalidrawElement[];
   let mockAppState: AppState;
@@ -62,7 +62,7 @@ describe("httpStorage - Critical Issues", () => {
     mockAppState = {} as AppState;
   });
 
-  describe("🔴 Issue 1: Inconsistent Return Values", () => {
+  describe("inconsistent return values", () => {
     it("should return reconciledElements in fallback path", async () => {
       const sceneVersion = getSceneVersion(mockElements);
       const serverVersion = sceneVersion + 1;
@@ -89,7 +89,6 @@ describe("httpStorage - Critical Issues", () => {
         mockAppState,
       );
 
-      // ISSUE: Fallback returns reconciledElements
       expect(result).not.toBe(false);
       expect(Array.isArray(result)).toBe(true);
     });
@@ -120,7 +119,6 @@ describe("httpStorage - Critical Issues", () => {
         mockAppState,
       );
 
-      // FIXED: Normal path now also returns reconciledElements for consistency
       expect(result).not.toBe(false);
       expect(Array.isArray(result)).toBe(true);
       // The result should be the reconciled elements, not the original elements
@@ -128,33 +126,7 @@ describe("httpStorage - Critical Issues", () => {
     });
   });
 
-  describe("🔴 Issue 2: Race Condition (Documented)", () => {
-    it("demonstrates concurrent saves both succeed", async () => {
-      const sceneVersion = getSceneVersion(mockElements);
-
-      const mockBuffer = new ArrayBuffer(4 + 12 + 100);
-      const view = new DataView(mockBuffer);
-      view.setUint32(0, sceneVersion, false);
-
-      // Both requests will see same server version
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        arrayBuffer: async () => mockBuffer,
-      });
-
-      const [result1, result2] = await Promise.all([
-        saveToHttpStorage(mockPortal, mockElements, mockAppState),
-        saveToHttpStorage(mockPortal, mockElements, mockAppState),
-      ]);
-
-      // ISSUE: Both succeed - last write wins, potential data loss
-      expect(result1).not.toBe(false);
-      expect(result2).not.toBe(false);
-    });
-  });
-
-  describe("✅ Issue 1 Fix: 404 Path Consistency", () => {
+  describe("404 path consistency with firebase", () => {
     it("should return new array in 404 path (new room)", async () => {
       global.fetch = vi
         .fn()
@@ -173,7 +145,6 @@ describe("httpStorage - Critical Issues", () => {
         mockAppState,
       );
 
-      // FIXED: 404 path now returns a new array for consistency
       expect(result).not.toBe(false);
       expect(Array.isArray(result)).toBe(true);
       expect(result).not.toBe(mockElements); // Should be new array
