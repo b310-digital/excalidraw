@@ -13,7 +13,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": ["Upstash.context7-mcp"]
+      "extensions": ["Upstash.context7-mcp", "shd101wyy.markdown-preview-enhanced", "bierner.markdown-mermaid", "vstirbu.vscode-mermaid-preview"]
     }
   }
   // Features to add to the dev container. More info: https://containers.dev/features.
