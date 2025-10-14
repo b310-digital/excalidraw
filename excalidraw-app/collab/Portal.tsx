@@ -7,7 +7,10 @@ import { isSyncableElement } from "../data";
 import type { TCollabClass } from "./Collab";
 import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import { WS_EVENTS, FILE_UPLOAD_TIMEOUT, WS_SUBTYPES } from "../app_constants";
-import type { OnUserFollowedPayload, SocketId } from "@excalidraw/excalidraw/types";
+import type {
+  OnUserFollowedPayload,
+  SocketId,
+} from "@excalidraw/excalidraw/types";
 import type { UserIdleState } from "@excalidraw/excalidraw/constants";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import throttle from "lodash.throttle";
@@ -93,14 +96,14 @@ class Portal {
       this.broadcastScene(
         WS_SUBTYPES.INIT,
         this.collab.getSceneElementsIncludingDeleted(),
-        true
+        true,
       );
     });
 
     this.socket?.on("room-user-change", (clients: SocketId[]) => {
       this.collab.setCollaborators(clients);
     });
-    
+
     this.socket?.io.on("reconnect_attempt", () => {
       console.log("🔄 Trying to reconnect...");
       this._showBanner(true);
@@ -159,13 +162,18 @@ class Portal {
   }
 
   isOpen() {
-    return !!(this.socketInitialized && this.socket && this.roomId && this.roomKey);
+    return !!(
+      this.socketInitialized &&
+      this.socket &&
+      this.roomId &&
+      this.roomKey
+    );
   }
 
   async _broadcastSocketData(
     data: SocketUpdateData,
     volatile: boolean = false,
-    roomId?: string
+    roomId?: string,
   ) {
     if (!this.isOpen()) return;
     const json = JSON.stringify(data);
@@ -175,7 +183,7 @@ class Portal {
       volatile ? WS_EVENTS.SERVER_VOLATILE : WS_EVENTS.SERVER,
       roomId ?? this.roomId,
       encryptedBuffer,
-      iv
+      iv,
     );
   }
 
@@ -218,7 +226,7 @@ class Portal {
   broadcastScene = async (
     updateType: WS_SUBTYPES.INIT | WS_SUBTYPES.UPDATE,
     elements: readonly OrderedExcalidrawElement[],
-    syncAll: boolean
+    syncAll: boolean,
   ) => {
     if (updateType === WS_SUBTYPES.INIT && !syncAll) {
       throw new Error("syncAll must be true when sending SCENE.INIT");
@@ -290,7 +298,7 @@ class Portal {
     payload: {
       sceneBounds: SocketUpdateDataSource["USER_VISIBLE_SCENE_BOUNDS"]["payload"]["sceneBounds"];
     },
-    roomId: string
+    roomId: string,
   ) => {
     if (this.socket?.id) {
       const data: SocketUpdateDataSource["USER_VISIBLE_SCENE_BOUNDS"] = {
