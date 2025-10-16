@@ -76,8 +76,7 @@ class Portal {
     }
 
     setTimeout(() => {
-      if (this.socket?.connected && this.roomId) {
-        console.log(" Join-room fallback");
+      if (this.socket?.connected && this.roomId) {        
         this._joinRoom();
       }
     }, 3000);
@@ -104,19 +103,15 @@ class Portal {
       this.collab.setCollaborators(clients);
     });
 
-    this.socket?.io.on("reconnect_attempt", () => {
-      console.log("🔄 Trying to reconnect...");
+    this.socket?.io.on("reconnect_attempt", () => {      
       this._showBanner(true);
     });
 
-    this.socket?.io.on("reconnect", () => {
-      console.log("✅ Socket.IO Reconnected");
-      this.socket?.once("connect", () => {
-        console.log("🔗 Full connection. Socket ID:", this.socket?.id);
+    this.socket?.io.on("reconnect", () => {      
+      this.socket?.once("connect", () => {        
         this._joinRoom();
 
-        const elements = this.collab.getSceneElementsIncludingDeleted();
-        console.log(` Re-sending full scene with ${elements.length} element`);
+        const elements = this.collab.getSceneElementsIncludingDeleted();        
         this.broadcastScene(WS_SUBTYPES.INIT, elements, true);
 
         this._showBanner(false);
@@ -144,8 +139,7 @@ class Portal {
   }
 
   private _joinRoom() {
-    if (this.roomId && this.socket?.connected) {
-      console.log(" Joining room:", this.roomId);
+    if (this.roomId && this.socket?.connected) {      
       this.socket.emit("join-room", this.roomId);
     }
   }
