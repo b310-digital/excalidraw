@@ -13,6 +13,10 @@ RUN yarn --network-timeout 600000
 COPY . .
 
 ARG NODE_ENV=production
+
+ARG BASE_PATH=/
+ENV BASE_PATH=${BASE_PATH}
+
 RUN yarn build:app:docker
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine as production
