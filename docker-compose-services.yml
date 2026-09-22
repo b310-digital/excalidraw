@@ -10,7 +10,7 @@ services:
       #   - ../kits/excalidraw-storage-backend/:/home/node/app
     stdin_open: true
     ports:
-      - "${EXCALIDRAW_STORAGE_PORT:-8080}:8080"
+      - "${VITE_APP_STORAGE_PORT:-8080}:8080"
     environment:
       STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-excalidraw-dev}
 
@@ -18,7 +18,7 @@ services:
     build:
       context: https://github.com/kitsteam/excalidraw-room.git#master
     ports:
-      - "${EXCALIDRAW_ROOM_PORT:-5001}:8090"
+      - "${VITE_APP_ROOM_PORT:-5001}:8090"
 
   postgres:
     image: postgres:15-alpine

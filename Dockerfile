@@ -8,8 +8,8 @@ FROM build as production_buildstage
 COPY package.json yarn.lock ./
 COPY excalidraw-app/package.json ./excalidraw-app/
 COPY packages/excalidraw/package.json ./packages/excalidraw/
-COPY packages/common/package.json ./packages/common/                                                                                                                                                            
-COPY packages/element/package.json ./packages/element/                                                                                                                                                          
+COPY packages/common/package.json ./packages/common/
+COPY packages/element/package.json ./packages/element/
 COPY packages/math/package.json ./packages/math/
 
 # do not ignore optional dependencies:
@@ -21,6 +21,8 @@ COPY . .
 
 
 ARG NODE_ENV=production
+ARG VITE_APP_STORAGE_PORT=5011
+ARG VITE_APP_ROOM_PORT=5012
 
 RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
 
