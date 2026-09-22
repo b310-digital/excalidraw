@@ -24,12 +24,6 @@ export default defineConfig(({ mode }) => {
         // allow serving files from the project root (parent of excalidraw-app)
         allow: [path.resolve(__dirname, "..")],
       },
-      proxy: {
-        "/api": {
-          target: "http://excalidraw-storage-backend:8080",
-          changeOrigin: true,
-        },
-      },
     },
     // We need to specify the envDir since now there are no
     //more located in parallel with the vite.config.ts file but in parent dir
