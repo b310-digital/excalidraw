@@ -15,6 +15,7 @@ services:
       disable: true
     environment:
       - NODE_ENV=development
+      - VITE_APP_PORT=3000
     volumes:
       - node_modules:/opt/node_app/node_modules
       - ./:/opt/node_app/
