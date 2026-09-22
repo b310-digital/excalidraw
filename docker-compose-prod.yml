@@ -9,7 +9,7 @@ services:
       target: production
     container_name: excalidraw
     ports:
-      - "${VITE_APP_PORT:-5010}:8080"
+      - "${PROD_APP_PORT:-5010}:8080"
     healthcheck:
       disable: true
     environment:

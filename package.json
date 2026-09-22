@@ -86,7 +86,16 @@
     "release:latest": "node scripts/release.js --tag=latest",
     "rm:build": "rimraf --glob excalidraw-app/build excalidraw-app/dist excalidraw-app/dev-dist packages/*/dist packages/*/build examples/*/build examples/*/dist",
     "rm:node_modules": "rimraf --glob node_modules excalidraw-app/node_modules packages/*/node_modules",
-    "clean-install": "yarn rm:node_modules && yarn install"
+    "clean-install": "yarn rm:node_modules && yarn install",
+    "docker:dev": "docker compose",
+    "docker:dev:up": "yarn docker:dev -- up --build -d && yarn docker:dev -- exec -it excalidraw /bin/bash",
+    "docker:dev:down": "yarn docker:dev -- down",
+    "docker:services": "docker compose -f docker-compose-services.yml",
+    "docker:services:up": "yarn docker:services -- up -d",
+    "docker:services:down": "yarn docker:services -- down",
+    "docker:prod": "docker compose -f docker-compose-prod.yml --env-file .env --env-file .env.production.local",
+    "docker:prod:up": "yarn docker:prod -- up --build -d",
+    "docker:prod:down": "yarn docker:prod -- down"
   },
   "resolutions": {
     "strip-ansi": "6.0.1"

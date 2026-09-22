@@ -4,15 +4,27 @@ This is a fork from the [excalidraw project](https://github.com/excalidraw/excal
 
 ## Setup with docker
 
-Please copy the .env.development.default or .env.production.default file to .env (or with environment without default at the end) and change it according to your needs, see [react-scripts](https://create-react-app.dev/docs/adding-custom-environment-variables/).
+Please copy the .env.default file to .env and change it according to your needs.
 
 ### Development
 
 ```
-docker-compose up -d
-docker-compose exec excalidraw yarn install
-docker-compose exec excalidraw yarn start --host
+yarn docker:dev:up
 ```
+
+This will start all docker containers and connects you to the main app container with all your code files mounted.
+Inside that container run
+
+```
+yarn install
+yarn start --host
+```
+
+This will start excalidraw on your configured `VITE_APP_PORT` (default `3000`).
+
+If you prefer to have your dev server running on your host, you can use `yarn docker:services:up` and run the yarn commands directly on your host.
+
+To shut down all docker containers simply run `yarn docker:dev:down` (`yarn docker:services:down` respectively) on your host.
 
 Hint: Collab mode requires a secure context (https). Localhost works as well, but not http over local network.
 
@@ -32,8 +44,14 @@ Hint: Collab mode requires a secure context (https). Localhost works as well, bu
 Note: The default port of nginx changed from 80 to 8080.
 
 ```
-docker-compose -f docker-compose-prod.yml up -d
+yarn docker:prod:up
 ```
+
+This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`).
+
+Hint: If you want to override things in comparison to your dev environment, just create .env.production.local and define changed variables.
+
+### README from upstream
 
 <a href="https://excalidraw.com/" target="_blank" rel="noopener">
   <picture>
