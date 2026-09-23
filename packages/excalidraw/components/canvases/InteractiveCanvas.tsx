@@ -1,12 +1,10 @@
 import React, { useEffect, useRef } from "react";
 
 import {
-  CURSOR_TYPE,
   isShallowEqual,
   sceneCoordsToViewportCoords,
   type EditorInterface,
 } from "@excalidraw/common";
-import { AnimationController } from "@excalidraw/excalidraw/renderer/animation";
 
 import type {
   InteractiveCanvasRenderConfig,
@@ -22,7 +20,10 @@ import type {
 } from "@excalidraw/element/types";
 
 import { t } from "../../i18n";
+import { getSelectionColor } from "../../renderer/helpers";
 import { renderInteractiveScene } from "../../renderer/interactiveScene";
+
+import { AnimationController } from "../../renderer/animation";
 
 import type {
   AppClassProperties,
@@ -38,13 +39,15 @@ type InteractiveCanvasProps = {
   visibleElements: readonly NonDeletedExcalidrawElement[];
   selectedElements: readonly NonDeletedExcalidrawElement[];
   allElementsMap: NonDeletedSceneElementsMap;
-  sceneNonce: number | undefined;
+  canvasNonce: string;
   selectionNonce: number | undefined;
   scale: number;
   appState: InteractiveCanvasAppState;
   renderScrollbars: boolean;
   editorInterface: EditorInterface;
   app: AppClassProperties;
+  interactionEnabled: boolean;
+  navigationEnabled: boolean;
   renderInteractiveSceneCallback: (
     data: RenderInteractiveSceneCallback,
   ) => void;
@@ -53,6 +56,7 @@ type InteractiveCanvasProps = {
     DOMAttributes<HTMLCanvasElement | HTMLDivElement>["onContextMenu"],
     undefined
   >;
+  onClick: Exclude<DOMAttributes<HTMLCanvasElement>["onClick"], undefined>;
   onPointerMove: Exclude<
     DOMAttributes<HTMLCanvasElement>["onPointerMove"],
     undefined
@@ -133,12 +137,7 @@ const InteractiveCanvas = (props: InteractiveCanvasProps) => {
       remotePointerButton.set(socketId, user.button);
     });
 
-    const selectionColor =
-      (props.containerRef?.current &&
-        getComputedStyle(props.containerRef.current).getPropertyValue(
-          "--color-selection",
-        )) ||
-      "#6965db";
+    const selectionColor = getSelectionColor(props.containerRef?.current);
 
     rendererParams.current = {
       app: props.app,
@@ -158,7 +157,7 @@ const InteractiveCanvas = (props: InteractiveCanvasProps) => {
         selectionColor,
         renderScrollbars: props.renderScrollbars,
         // NOTE not memoized on so we don't rerender on cursor move
-        lastViewportPosition: props.app.lastViewportPosition,
+        lastViewportPosition: props.app.viewport.lastPosition,
       },
       editorInterface: props.editorInterface,
       callback: props.renderInteractiveSceneCallback,
@@ -199,19 +198,22 @@ const InteractiveCanvas = (props: InteractiveCanvasProps) => {
   return (
     <canvas
       className="excalidraw__canvas interactive"
+      // NOTE no `cursor` style here — the cursor is managed imperatively
+      // (see `AppCursor`); an inline style would clobber it whenever its
+      // computed value changes across rerenders
       style={{
         width: props.appState.width,
         height: props.appState.height,
-        cursor:
-          props.appState.viewModeEnabled &&
-          props.appState.activeTool.type !== "laser"
-            ? CURSOR_TYPE.GRAB
-            : CURSOR_TYPE.AUTO,
       }}
       width={props.appState.width * props.scale}
       height={props.appState.height * props.scale}
       ref={props.handleCanvasRef}
+      // NOTE all the handlers early-exit in App when the editor is
+      // non-interactive (running only a restricted, link-only code path if
+      // `interaction.allowed.links` is enabled), so they're safe to bind
+      // unconditionally
       onContextMenu={props.onContextMenu}
+      onClick={props.onClick}
       onPointerMove={props.onPointerMove}
       onPointerUp={props.onPointerUp}
       onPointerCancel={props.onPointerCancel}
@@ -249,7 +251,10 @@ const getRelevantAppStateProps = (
   multiElement: appState.multiElement,
   newElement: appState.newElement,
   isBindingEnabled: appState.isBindingEnabled,
+  isMidpointSnappingEnabled: appState.isMidpointSnappingEnabled,
+  gridModeEnabled: appState.gridModeEnabled,
   suggestedBinding: appState.suggestedBinding,
+  hoveredArrowTextAnchor: appState.hoveredArrowTextAnchor,
   isRotating: appState.isRotating,
   elementsToHighlight: appState.elementsToHighlight,
   collaborators: appState.collaborators, // Necessary for collab. sessions
@@ -275,15 +280,17 @@ const areEqual = (
   // This could be further optimised if needed, as we don't have to render interactive canvas on each scene mutation
   if (
     prevProps.selectionNonce !== nextProps.selectionNonce ||
-    prevProps.sceneNonce !== nextProps.sceneNonce ||
+    prevProps.canvasNonce !== nextProps.canvasNonce ||
     prevProps.scale !== nextProps.scale ||
     // we need to memoize on elementsMap because they may have renewed
-    // even if sceneNonce didn't change (e.g. we filter elements out based
+    // even if canvasNonce didn't change (e.g. we filter elements out based
     // on appState)
     prevProps.elementsMap !== nextProps.elementsMap ||
     prevProps.visibleElements !== nextProps.visibleElements ||
     prevProps.selectedElements !== nextProps.selectedElements ||
-    prevProps.renderScrollbars !== nextProps.renderScrollbars
+    prevProps.renderScrollbars !== nextProps.renderScrollbars ||
+    prevProps.interactionEnabled !== nextProps.interactionEnabled ||
+    prevProps.navigationEnabled !== nextProps.navigationEnabled
   ) {
     return false;
   }

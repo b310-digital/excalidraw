@@ -8,6 +8,7 @@ import {
   pointFromVector,
   pointRotateRads,
   pointsEqual,
+  polygonIncludesPoint,
   vectorFromPoint,
   vectorNormalize,
   vectorScale,
@@ -22,6 +23,7 @@ import type {
   Curve,
   GlobalPoint,
   LineSegment,
+  LocalPoint,
   Radians,
 } from "@excalidraw/math";
 
@@ -61,6 +63,10 @@ import { distanceToElement } from "./distance";
 
 import { getBindingGap } from "./binding";
 
+import { hasBackground } from "./comparisons";
+
+import { getFreedrawFillPolygon, getFreedrawMaxStrokeRadius } from "./shape";
+
 import type {
   ElementsMap,
   ExcalidrawArrowElement,
@@ -83,7 +89,7 @@ export const shouldTestInside = (element: ExcalidrawElement) => {
   }
 
   const isDraggableFromInside =
-    !isTransparent(element.backgroundColor) ||
+    (hasBackground(element.type) && !isTransparent(element.backgroundColor)) ||
     hasBoundTextElement(element) ||
     isIframeLikeElement(element) ||
     isTextElement(element);
@@ -113,6 +119,19 @@ let cachedElement: WeakRef<ExcalidrawElement> | null = null;
 let cachedThreshold: number = Infinity;
 let cachedHit: boolean = false;
 let cachedOverrideShouldTestInside = false;
+let cachedFrameNameBound: FrameNameBounds | null = null;
+
+const frameNameBoundsEqual = (
+  a: FrameNameBounds | null,
+  b: FrameNameBounds | null,
+) =>
+  a === b ||
+  (!!a &&
+    !!b &&
+    a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height);
 
 export const hitElementItself = ({
   point,
@@ -122,12 +141,16 @@ export const hitElementItself = ({
   frameNameBound = null,
   overrideShouldTestInside = false,
 }: HitTestArgs) => {
-  // Return cached result if the same point and element version is tested again
+  // Return cached result if the same point and element version is tested again.
+  // A cached hit stays valid for any larger threshold, while a cached miss
+  // stays valid only for a threshold no larger than the cached one (a larger
+  // threshold could turn a miss into a hit).
   if (
     cachedPoint &&
     pointsEqual(point, cachedPoint) &&
-    cachedThreshold <= threshold &&
-    overrideShouldTestInside === cachedOverrideShouldTestInside
+    (cachedHit ? cachedThreshold <= threshold : cachedThreshold >= threshold) &&
+    overrideShouldTestInside === cachedOverrideShouldTestInside &&
+    frameNameBoundsEqual(frameNameBound, cachedFrameNameBound)
   ) {
     const derefElement = cachedElement?.deref();
     if (
@@ -154,14 +177,14 @@ export const hitElementItself = ({
 
   // Hit test against the extended, rotated bounding box of the element first
   const bounds = getElementBounds(element, elementsMap, true);
-  const hitBounds = isPointWithinBounds(
-    pointFrom(bounds[0] - threshold, bounds[1] - threshold),
-    pointRotateRads(
-      point,
-      getCenterForBounds(bounds),
-      -element.angle as Radians,
-    ),
-    pointFrom(bounds[2] + threshold, bounds[3] + threshold),
+  const hitBounds = isPointInRotatedBounds(
+    point,
+    bounds,
+    element.angle,
+    // Freedraw bounds follow the centerline points, but the ink extends past them
+    isFreeDrawElement(element)
+      ? threshold + getFreedrawMaxStrokeRadius(element)
+      : threshold,
   );
 
   // PERF: Bail out early if the point is not even in the
@@ -187,9 +210,28 @@ export const hitElementItself = ({
   cachedElement = new WeakRef(element);
   cachedThreshold = threshold;
   cachedOverrideShouldTestInside = overrideShouldTestInside;
+  cachedFrameNameBound = frameNameBound;
   cachedHit = result;
 
   return result;
+};
+
+const isPointInRotatedBounds = (
+  point: GlobalPoint,
+  bounds: Bounds,
+  angle: Radians,
+  tolerance = 0,
+) => {
+  const adjustedPoint =
+    angle === 0
+      ? point
+      : pointRotateRads(point, getCenterForBounds(bounds), -angle as Radians);
+
+  return isPointWithinBounds(
+    pointFrom(bounds[0] - tolerance, bounds[1] - tolerance),
+    adjustedPoint,
+    pointFrom(bounds[2] + tolerance, bounds[3] + tolerance),
+  );
 };
 
 export const hitElementBoundingBox = (
@@ -198,12 +240,8 @@ export const hitElementBoundingBox = (
   elementsMap: ElementsMap,
   tolerance = 0,
 ) => {
-  let [x1, y1, x2, y2] = getElementBounds(element, elementsMap);
-  x1 -= tolerance;
-  y1 -= tolerance;
-  x2 += tolerance;
-  y2 += tolerance;
-  return isPointWithinBounds(pointFrom(x1, y1), point, pointFrom(x2, y2));
+  const bounds = getElementBounds(element, elementsMap, true);
+  return isPointInRotatedBounds(point, bounds, element.angle, tolerance);
 };
 
 export const hitElementBoundingBoxOnly = (
@@ -313,7 +351,10 @@ export const getAllHoveredElementAtPoint = (
     ) {
       candidateElements.push(element);
 
-      if (!isTransparent(element.backgroundColor)) {
+      if (
+        hasBackground(element.type) &&
+        !isTransparent(element.backgroundColor)
+      ) {
         break;
       }
     }
@@ -357,7 +398,7 @@ export const getHoveredElementForFocusPoint = (
   elements: readonly Ordered<NonDeletedExcalidrawElement>[],
   elementsMap: NonDeletedSceneElementsMap,
   tolerance?: number,
-): ExcalidrawBindableElement | null => {
+): NonDeleted<ExcalidrawBindableElement> | null => {
   const candidateElements: NonDeleted<ExcalidrawBindableElement>[] = [];
   // We need to to hit testing from front (end of the array) to back (beginning of the array)
   // because array is ordered from lower z-index to highest and we want element z-index
@@ -433,6 +474,7 @@ export const intersectElementWithLineSegment = (
   // Do the actual intersection test against the element's shape
   switch (element.type) {
     case "rectangle":
+    case "stickynote":
     case "image":
     case "text":
     case "iframe":
@@ -465,7 +507,12 @@ export const intersectElementWithLineSegment = (
     case "line":
     case "freedraw":
     case "arrow":
-      return intersectLinearOrFreeDrawWithLineSegment(element, line, onlyFirst);
+      return intersectLinearOrFreeDrawWithLineSegment(
+        element,
+        line,
+        elementsMap,
+        onlyFirst,
+      );
   }
 };
 
@@ -532,11 +579,15 @@ const lineIntersections = (
 const intersectLinearOrFreeDrawWithLineSegment = (
   element: ExcalidrawLinearElement | ExcalidrawFreeDrawElement,
   segment: LineSegment<GlobalPoint>,
+  elementsMap: ElementsMap,
   onlyFirst = false,
 ): GlobalPoint[] => {
   // NOTE: This is the only one which return the decomposed elements
   // rotated! This is due to taking advantage of roughjs definitions.
-  const [lines, curves] = deconstructLinearOrFreeDrawElement(element);
+  const [lines, curves] = deconstructLinearOrFreeDrawElement(
+    element,
+    elementsMap,
+  );
   const intersections: GlobalPoint[] = [];
 
   for (const l of lines) {
@@ -564,7 +615,9 @@ const intersectLinearOrFreeDrawWithLineSegment = (
       continue;
     }
 
-    const hits = curveIntersectLineSegment(c, segment);
+    const hits = curveIntersectLineSegment(c, segment, {
+      iterLimit: 10,
+    });
 
     if (hits.length > 0) {
       intersections.push(...hits);
@@ -737,6 +790,26 @@ export const isPointInElement = (
   ) {
     // There isn't any "inside" for a non-looping path
     return false;
+  }
+
+  if (isFreeDrawElement(element)) {
+    // Test before the rotated-bounds check below: the smoothed fill can bulge
+    // past the recorded points, and how much of it those bounds would clip
+    // depends on the angle. An asymmetric loop's rotated bounds center is also
+    // not its rotation pivot.
+    const [x1, y1, x2, y2] = getElementBounds(element, elementsMap, true);
+    const [px, py] = pointRotateRads(
+      point,
+      pointFrom<GlobalPoint>((x1 + x2) / 2, (y1 + y2) / 2),
+      -element.angle as Radians,
+    );
+
+    // The fill follows the centerline rather than the stroke outline, and uses
+    // the same even-odd rule as RoughJS's filled curves.
+    return polygonIncludesPoint(
+      pointFrom<LocalPoint>(px - element.x, py - element.y),
+      getFreedrawFillPolygon(element),
+    );
   }
 
   const [x1, y1, x2, y2] = getElementBounds(element, elementsMap);
