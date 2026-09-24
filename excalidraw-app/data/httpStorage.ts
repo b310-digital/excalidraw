@@ -184,7 +184,9 @@ export const loadFromHttpStorage = async (
   );
   const buffer = await getResponse.arrayBuffer();
   const elements = getSyncableElements(
-    restoreElements(await getElementsFromBuffer(buffer, roomKey), null),
+    restoreElements(await getElementsFromBuffer(buffer, roomKey), null, {
+      deleteInvisibleElements: true,
+    }),
   );
   return elements;
 };
