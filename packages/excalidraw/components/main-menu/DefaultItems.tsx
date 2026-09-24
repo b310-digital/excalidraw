@@ -9,7 +9,9 @@ import {
   actionLoadScene,
   actionSaveToActiveFile,
   actionShortcuts,
+  actionToggleArrowBinding,
   actionToggleGridMode,
+  actionToggleMidpointSnapping,
   actionToggleObjectsSnapMode,
   actionToggleSearchMenu,
   actionToggleStats,
@@ -17,6 +19,8 @@ import {
   actionToggleZenMode,
 } from "../../actions";
 import { actionToggleViewMode } from "../../actions/actionToggleViewMode";
+import { resolveInputDevice } from "../../appState";
+
 import { getShortcutFromShortcutName } from "../../actions/shortcuts";
 import { trackEvent } from "../../analytics";
 import { useUIAppState } from "../../context/ui-appState";
@@ -37,7 +41,13 @@ import DropdownMenuItemCheckbox from "../dropdownMenu/DropdownMenuItemCheckbox";
 import DropdownMenuItemContentRadio from "../dropdownMenu/DropdownMenuItemContentRadio";
 import DropdownMenuItemLink from "../dropdownMenu/DropdownMenuItemLink";
 import DropdownMenuSub from "../dropdownMenu/DropdownMenuSub";
-import { GithubIcon, DiscordIcon, XBrandIcon, settingsIcon } from "../icons";
+import {
+  GithubIcon,
+  DiscordIcon,
+  XBrandIcon,
+  settingsIcon,
+  emptyIcon,
+} from "../icons";
 import {
   boltIcon,
   DeviceDesktopIcon,
@@ -54,6 +64,8 @@ import {
 } from "../icons";
 
 import "./DefaultItems.scss";
+
+import type { InputDevice } from "../../types";
 
 export const LoadScene = () => {
   const { t } = useI18n();
@@ -224,18 +236,22 @@ export const ToggleTheme = (
   props:
     | {
         allowSystemTheme: true;
+        /**
+         * Controls the theme of this UI component only.
+         * You should subscribe to `props.onThemeChange` and control the theme
+         * upstream.
+         */
         theme: Theme | "system";
-        onSelect: (theme: Theme | "system") => void;
       }
     | {
-        allowSystemTheme?: false;
-        onSelect?: (theme: Theme) => void;
+        allowSystemTheme: false;
       },
 ) => {
   const { t } = useI18n();
   const appState = useUIAppState();
   const actionManager = useExcalidrawActionManager();
   const shortcut = getShortcutFromShortcutName("toggleTheme");
+  const appProps = useAppProps();
 
   if (!actionManager.isActionEnabled(actionToggleTheme)) {
     return null;
@@ -246,7 +262,16 @@ export const ToggleTheme = (
       <DropdownMenuItemContentRadio
         name="theme"
         value={props.theme}
-        onChange={(value: Theme | "system") => props.onSelect(value)}
+        onChange={(value: Theme | "system") => {
+          if (appProps.onThemeChange) {
+            appProps.onThemeChange(value);
+            return;
+          }
+
+          console.warn(
+            "MainMenu.DefaultItems.ToggleTheme: `<Excalidraw/> props.onThemeChange` must be defined to use system theme selection.",
+          );
+        }}
         choices={[
           {
             value: THEME.LIGHT,
@@ -276,13 +301,7 @@ export const ToggleTheme = (
         // do not close the menu when changing theme
         event.preventDefault();
 
-        if (props?.onSelect) {
-          props.onSelect(
-            appState.theme === THEME.DARK ? THEME.LIGHT : THEME.DARK,
-          );
-        } else {
-          return actionManager.executeAction(actionToggleTheme);
-        }
+        actionManager.executeAction(actionToggleTheme);
       }}
       icon={appState.theme === THEME.DARK ? SunIcon : MoonIcon}
       data-testid="toggle-dark-mode"
@@ -425,6 +444,73 @@ const PreferencesToggleToolLockItem = () => {
   );
 };
 
+const PreferencesBoxSelectionModeItem = () => {
+  const { t } = useI18n();
+  const appState = useUIAppState();
+  const setAppState = useExcalidrawSetAppState();
+
+  return (
+    <DropdownMenuItemContentRadio<"contain" | "overlap">
+      name="boxSelectionMode"
+      icon={emptyIcon}
+      value={appState.boxSelectionMode}
+      onChange={(value) => {
+        setAppState({
+          boxSelectionMode: value,
+        });
+      }}
+      choices={[
+        {
+          value: "contain",
+          label: t("labels.boxSelectionContain"),
+          ariaLabel: t("labels.boxSelectionContain"),
+        },
+        {
+          value: "overlap",
+          label: t("labels.boxSelectionOverlap"),
+          ariaLabel: t("labels.boxSelectionOverlap"),
+        },
+      ]}
+    >
+      {t("labels.boxSelectionMode")}
+    </DropdownMenuItemContentRadio>
+  );
+};
+
+const PreferencesInputDeviceItem = () => {
+  const { t } = useI18n();
+  const appState = useUIAppState();
+  const setAppState = useExcalidrawSetAppState();
+
+  return (
+    <DropdownMenuItemContentRadio<Exclude<InputDevice, "auto">>
+      name="inputDevice"
+      icon={emptyIcon}
+      // `auto` isn't offered yet; the radio shows what it resolves to
+      value={resolveInputDevice(appState.inputDevice)}
+      onChange={(value) => {
+        setAppState({
+          inputDevice: value,
+        });
+      }}
+      choices={[
+        {
+          value: "trackpad",
+          label: t("labels.inputDeviceTrackpad"),
+          ariaLabel: t("labels.inputDeviceTrackpad"),
+        },
+        {
+          value: "mouse",
+          label: t("labels.inputDeviceMouse"),
+          ariaLabel: t("labels.inputDeviceMouse"),
+        },
+      ]}
+    >
+      {t("labels.inputDevice")}
+    </DropdownMenuItemContentRadio>
+  );
+};
+
 const PreferencesToggleSnapModeItem = () => {
   const { t } = useI18n();
   const actionManager = useExcalidrawActionManager();
@@ -439,6 +525,40 @@ const PreferencesToggleSnapModeItem = () => {
       }}
     >
       {t("buttons.objectsSnapMode")}
+    </DropdownMenuItemCheckbox>
+  );
+};
+
+const PreferencesToggleArrowBindingItem = () => {
+  const { t } = useI18n();
+  const actionManager = useExcalidrawActionManager();
+  const appState = useUIAppState();
+  return (
+    <DropdownMenuItemCheckbox
+      checked={appState.bindingPreference === "enabled"}
+      onSelect={(event) => {
+        actionManager.executeAction(actionToggleArrowBinding);
+        event.preventDefault();
+      }}
+    >
+      {t("labels.arrowBinding")}
+    </DropdownMenuItemCheckbox>
+  );
+};
+
+const PreferencesToggleMidpointSnappingItem = () => {
+  const { t } = useI18n();
+  const actionManager = useExcalidrawActionManager();
+  const appState = useUIAppState();
+  return (
+    <DropdownMenuItemCheckbox
+      checked={appState.isMidpointSnappingEnabled}
+      onSelect={(event) => {
+        actionManager.executeAction(actionToggleMidpointSnapping);
+        event.preventDefault();
+      }}
+    >
+      {t("labels.midpointSnapping")}
     </DropdownMenuItemCheckbox>
   );
 };
@@ -484,6 +604,9 @@ const PreferencesToggleViewModeItem = () => {
   const { t } = useI18n();
   const actionManager = useExcalidrawActionManager();
   const appState = useUIAppState();
+  if (!actionManager.isActionEnabled(actionToggleViewMode)) {
+    return null;
+  }
   return (
     <DropdownMenuItemCheckbox
       checked={appState.viewModeEnabled}
@@ -532,12 +655,16 @@ export const Preferences = ({
       <DropdownMenuSub.Content className="excalidraw-main-menu-preferences-submenu">
         {children || (
           <>
+            <PreferencesBoxSelectionModeItem />
+            <PreferencesInputDeviceItem />
             <PreferencesToggleToolLockItem />
             <PreferencesToggleSnapModeItem />
             <PreferencesToggleGridModeItem />
             <PreferencesToggleZenModeItem />
             <PreferencesToggleViewModeItem />
             <PreferencesToggleElementPropertiesItem />
+            <PreferencesToggleArrowBindingItem />
+            <PreferencesToggleMidpointSnappingItem />
           </>
         )}
         {additionalItems}
@@ -547,7 +674,11 @@ export const Preferences = ({
 };
 
 Preferences.ToggleToolLock = PreferencesToggleToolLockItem;
+Preferences.BoxSelectionMode = PreferencesBoxSelectionModeItem;
+Preferences.InputDevice = PreferencesInputDeviceItem;
 Preferences.ToggleSnapMode = PreferencesToggleSnapModeItem;
+Preferences.ToggleArrowBinding = PreferencesToggleArrowBindingItem;
+Preferences.ToggleMidpointSnapping = PreferencesToggleMidpointSnappingItem;
 Preferences.ToggleGridMode = PreferencesToggleGridModeItem;
 Preferences.ToggleZenMode = PreferencesToggleZenModeItem;
 Preferences.ToggleViewMode = PreferencesToggleViewModeItem;
