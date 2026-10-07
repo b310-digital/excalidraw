@@ -8,6 +8,12 @@ Please copy the .env.default file to .env and change it according to your needs.
 
 ### Development
 
+Execute
+```
+docker compose up --build -d
+docker compose exec -it excalidraw /bin/bash
+```
+or if you have `yarn` available on your host you also can simply run
 ```
 yarn docker:dev:up
 ```
