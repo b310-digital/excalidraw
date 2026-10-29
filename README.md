@@ -50,8 +50,13 @@ Hint: Collab mode requires a secure context (https). Localhost works as well, bu
 Note: The default port of nginx changed from 80 to 8080.
 
 ```
+docker compose -f docker-compose-prod.yml up --build -d
+```
+or if you have `yarn` available on your host you also can simply run
+```
 yarn docker:prod:up
 ```
+(this additionally loads `.env.production.local`, see hint below)
 
 This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`).
 
