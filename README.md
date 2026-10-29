@@ -9,17 +9,19 @@ Please copy the .env.default file to .env and change it according to your needs.
 ### Development
 
 Execute
+
 ```
 docker compose up --build -d
 docker compose exec -it excalidraw /bin/bash
 ```
+
 or if you have `yarn` available on your host you also can simply run
+
 ```
 yarn docker:dev:up
 ```
 
-This will start all docker containers and connects you to the main app container with all your code files mounted.
-Inside that container run
+This will start all docker containers and connects you to the main app container with all your code files mounted. Inside that container run
 
 ```
 yarn install
@@ -52,10 +54,13 @@ Note: The default port of nginx changed from 80 to 8080.
 ```
 docker compose -f docker-compose-prod.yml up --build -d
 ```
+
 or if you have `yarn` available on your host you also can simply run
+
 ```
 yarn docker:prod:up
 ```
+
 (this additionally loads `.env.production.local`, see hint below)
 
 This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`).
