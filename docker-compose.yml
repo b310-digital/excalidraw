@@ -16,6 +16,7 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_APP_PORT=3000
+      - VITE_APP_STORAGE_PROXY_TARGET=http://excalidraw-storage-backend:8080
     volumes:
       - node_modules:/opt/node_app/node_modules
       - ./:/opt/node_app/
