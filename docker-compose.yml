@@ -1,3 +1,6 @@
+include:
+  - docker-compose-services.yml
+
 services:
   excalidraw:
     stdin_open: true
@@ -7,51 +10,16 @@ services:
       args:
         - NODE_ENV=development
     ports:
-      - "3000:3000"
+      - "${VITE_APP_PORT:-3000}:3000"
     healthcheck:
       disable: true
     environment:
       - NODE_ENV=development
+      - VITE_APP_PORT=3000
+      - VITE_APP_STORAGE_PROXY_TARGET=http://excalidraw-storage-backend:8080
     volumes:
       - node_modules:/opt/node_app/node_modules
       - ./:/opt/node_app/
 
-  excalidraw-storage-backend:
-    build:
-      context: https://github.com/kitsteam/excalidraw-storage-backend.git#main
-      target: production
-      # When testing locally, you can also checkout the repository and start the backend manually:
-      # context: ../kits/excalidraw-storage-backend
-      # target: development
-      # volumes:
-      #   - ../kits/excalidraw-storage-backend/:/home/node/app
-    stdin_open: true
-    ports:
-      - "8080:8080"
-    environment:
-      STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-excalidraw-dev}
-
-  excalidraw-room:
-    build:
-      context: https://github.com/kitsteam/excalidraw-room.git#master
-    ports:
-      - "5001:8090"
-
-  postgres:
-    image: postgres:15-alpine
-    # Pass config parameters to the postgres server.
-    # Find more information below when you need to generate the ssl-relevant file your self
-    # command: -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
-    environment:
-      PGDATA: /var/lib/postgresql/data/pgdata
-      POSTGRES_DB: ${POSTGRES_DB:-excalidraw-dev}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_USER: ${POSTGRES_USER}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
 volumes:
-  postgres_data:
   node_modules:

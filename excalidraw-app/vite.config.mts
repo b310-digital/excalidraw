@@ -24,9 +24,13 @@ export default defineConfig(({ mode }) => {
         // allow serving files from the project root (parent of excalidraw-app)
         allow: [path.resolve(__dirname, "..")],
       },
+      // proxy the storage backend so the app can use relative /api urls
+      // (same origin -> no CORS / mixed content issues, works over LAN & https)
       proxy: {
         "/api": {
-          target: "http://excalidraw-storage-backend:8080",
+          target:
+            envVars.VITE_APP_STORAGE_PROXY_TARGET ||
+            `http://localhost:${envVars.VITE_APP_STORAGE_PORT || 8080}`,
           changeOrigin: true,
         },
       },
