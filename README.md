@@ -90,7 +90,7 @@ Hint: If you want to override things in comparison to your dev environment, just
   <a href="https://docs.excalidraw.com/docs/introduction/contributing">
     <img alt="PRs welcome!" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat"  /></a>
   <a href="https://discord.gg/UexuTaE">
-    <img alt="Chat on Discord" src="https://img.shields.io/discord/723672430744174682?color=738ad6&label=Chat%20on%20Discord&logo=discord&logoColor=ffffff&widge=false"/></a>
+    <img alt="Chat on Discord" src="https://img.shields.io/discord/723672430744174682?color=738ad6&label=Chat%20on%20Discord&logo=discord&logoColor=ffffff&widget=false"/></a>
   <a href="https://deepwiki.com/excalidraw/excalidraw">
     <img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg" /></a>
   <a href="https://twitter.com/excalidraw">

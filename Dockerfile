@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:22 AS build
+FROM --platform=${BUILDPLATFORM} node:24@sha256:8530f76a96d88820d288761f022e318970dda93d01536919fbc16076b7983e63 AS build
 
 WORKDIR /opt/node_app
 
@@ -15,7 +15,7 @@ COPY packages/math/package.json ./packages/math/
 # do not ignore optional dependencies:
 # Error: Cannot find module @rollup/rollup-linux-x64-gnu
 RUN --mount=type=cache,target=/root/.cache/yarn \
-    npm_config_target_arch=${TARGETARCH} yarn --network-timeout 600000
+    npm_config_target_arch=${TARGETARCH} yarn --frozen-lockfile --network-timeout 600000
 
 COPY . .
 
@@ -26,7 +26,7 @@ ARG VITE_APP_ROOM_PORT=5012
 
 RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
 
-FROM --platform=${TARGETPLATFORM} nginxinc/nginx-unprivileged:1.27-alpine as production
+FROM --platform=${TARGETPLATFORM} nginxinc/nginx-unprivileged:1.30.2-alpine-slim@sha256:59a7114c40708c891cc71f0338d116d9410d7c2a72d8d2e61ce4148219a20b10 as production
 
 COPY --from=production_buildstage /opt/node_app/excalidraw-app/build /usr/share/nginx/html
 
