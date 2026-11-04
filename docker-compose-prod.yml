@@ -1,3 +1,6 @@
+include:
+  - docker-compose-services.yml
+
 services:
   excalidraw:
     stdin_open: true
@@ -6,45 +9,8 @@ services:
       target: production
     container_name: excalidraw
     ports:
-      - "5010:8080"
-    restart: always
+      - "${PROD_APP_PORT:-5010}:8080"
     healthcheck:
       disable: true
     environment:
       - NODE_ENV=production
-
-  excalidraw-storage-backend:
-    build:
-      context: https://github.com/kitsteam/excalidraw-storage-backend.git#main
-      target: production
-    ports:
-      - "5011:8080"
-    restart: always
-    environment:
-      STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-excalidraw-prod}
-
-  excalidraw-room:
-    build:
-      context: https://github.com/kitsteam/excalidraw-room.git#master
-    ports:
-      - "5012:8090"
-
-  postgres:
-    image: postgres:15-alpine
-    # Pass config parameters to the postgres server.
-    # Find more information below when you need to generate the ssl-relevant file your self
-    # command: -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
-    environment:
-      PGDATA: /var/lib/postgresql/data/pgdata
-      POSTGRES_DB: ${POSTGRES_DB:-excalidraw-prod}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_USER: ${POSTGRES_USER}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/pgdata
-    # ports:
-    #   - "5432:5432"
-
-volumes:
-  notused:
-  postgres_data:

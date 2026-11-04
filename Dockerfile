@@ -21,6 +21,8 @@ COPY . .
 
 
 ARG NODE_ENV=production
+ARG VITE_APP_STORAGE_PORT=5011
+ARG VITE_APP_ROOM_PORT=5012
 
 RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
 
