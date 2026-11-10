@@ -7,9 +7,10 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 
 interface QRCodeProps {
   value: string;
+  ariaLabel: string;
 }
 
-export const QRCode = ({ value }: QRCodeProps) => {
+export const QRCode = ({ value, ariaLabel }: QRCodeProps) => {
   const { t } = useI18n();
   const [svgData, setSvgData] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
@@ -70,7 +71,7 @@ export const QRCode = ({ value }: QRCodeProps) => {
       <div
         className="ShareDialog__active__qrcode"
         role="img"
-        aria-label="QR code for collaboration link"
+        aria-label={ariaLabel}
         dangerouslySetInnerHTML={{ __html: svgData }}
       />
       <FilledButton
