@@ -140,6 +140,13 @@
         gap: 0.75rem;
       }
 
+      &__qrcodeWrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
       &__qrcode {
         display: flex;
         justify-content: center;
@@ -150,7 +157,7 @@
         border-radius: 0.5rem;
         border: 1px solid #e0e0e0;
 
-        $size: 150px;
+        $size: 250px;
         width: $size;
         height: $size;
 
