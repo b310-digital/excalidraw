@@ -1,7 +1,7 @@
 {
   "labels": {
-    "signUp": "",
-    "signIn": "",
+    "signUp": "Registrieren",
+    "signIn": "Anmelden",
     "paste": "Einfügen",
     "pasteAsPlaintext": "Als unformatierten Text einfügen",
     "pasteCharts": "Diagramme einfügen",
@@ -27,6 +27,7 @@
     "copyStyles": "Formatierung kopieren",
     "pasteStyles": "Formatierung übernehmen",
     "stroke": "Strich",
+    "textColor": "Textfarbe",
     "changeStroke": "Strichfarbe ändern",
     "background": "Hintergrund",
     "changeBackground": "Hintergrundfarbe ändern",
@@ -37,9 +38,9 @@
     "strokeStyle_dashed": "Gestrichelt",
     "strokeStyle_dotted": "Gepunktet",
     "sloppiness": "Sauberkeit",
-    "pressure": "",
-    "pressure_constant": "",
-    "pressure_variable": "",
+    "pressure": "Druck",
+    "pressure_constant": "Konstant",
+    "pressure_variable": "Variabel",
     "opacity": "Deckkraft",
     "textAlign": "Textausrichtung",
     "edges": "Kanten",
@@ -111,7 +112,7 @@
     "group": "Auswahl gruppieren",
     "ungroup": "Gruppierung aufheben",
     "collaborators": "Mitarbeitende",
-    "you": "",
+    "you": "Du",
     "toggleGrid": "Raster umschalten",
     "addToLibrary": "Zur Bibliothek hinzufügen",
     "removeFromLibrary": "Aus Bibliothek entfernen",
@@ -192,11 +193,14 @@
     "shapeSwitch": "Form wechseln",
     "preferences": "Einstellungen",
     "preferences_toolLock": "Werkzeug sperren",
-    "boxSelectionMode": "",
-    "boxSelectionContain": "",
-    "boxSelectionOverlap": "",
+    "boxSelectionMode": "Auswählen bei",
+    "boxSelectionContain": "Umschließen",
+    "boxSelectionOverlap": "Überlappen",
     "arrowBinding": "Pfeilbindung",
-    "midpointSnapping": "An Mittelpunkten einrasten"
+    "midpointSnapping": "An Mittelpunkten einrasten",
+    "inputDevice": "Eingabe",
+    "inputDeviceTrackpad": "Trackpad",
+    "inputDeviceMouse": "Maus"
   },
   "elementLink": {
     "title": "Link zum Objekt",
@@ -333,18 +337,19 @@
     "eraser": "Radierer",
     "frame": "Rahmenwerkzeug",
     "magicframe": "Wireframe zu Code",
+    "stickynote": "Haftnotiz",
     "embeddable": "Web-Einbettung",
     "laser": "Laserpointer",
-    "autoshape": "",
-    "bucketfill": "",
+    "autoshape": "Formerkennung",
+    "bucketfill": "Farbeimer",
     "hand": "Hand (Schwenkwerkzeug)",
     "extraTools": "Weitere Werkzeuge",
     "mermaidToExcalidraw": "Mermaid zu Excalidraw",
     "convertElementType": "Formtyp umschalten"
   },
   "bucketfill": {
-    "noRegion": "",
-    "tooComplex": ""
+    "noRegion": "Hier wurde kein geschlossener Bereich zum Füllen gefunden.",
+    "tooComplex": "Dieser Bereich ist zu komplex zum Füllen."
   },
   "element": {
     "rectangle": "Rechteck",
@@ -358,6 +363,7 @@
     "group": "Gruppe",
     "frame": "Rahmen",
     "magicframe": "Wireframe zu Code",
+    "stickynote": "Haftnotiz",
     "embeddable": "Web-Einbettung",
     "selection": "Auswahl",
     "iframe": "IFrame"
@@ -376,15 +382,17 @@
     "freeDraw": "Klicke und ziehe. Lass los, wenn du fertig bist",
     "text": "Tipp: Du kannst auch Text hinzufügen, indem du mit dem Auswahlwerkzeug auf eine beliebige Stelle doppelklickst",
     "embeddable": "Klicken und ziehen, um eine Webseiten-Einbettung zu erstellen",
-    "autoshape": "",
+    "stickynote": "Klicke, um eine Notiz zu platzieren, oder ziehe, um ihre Größe festzulegen",
+    "autoshape": "Zeichne Rechtecke, Kreise, Rauten, Linien und Pfeile",
     "text_selected": "Doppelklicken oder {{shortcut}} drücken, um Text zu bearbeiten",
     "text_editing": "Drücke {{shortcut_1}} oder {{shortcut_2}}, um die Bearbeitung abzuschließen",
     "linearElementMulti": "Klicke auf den letzten Punkt oder drücke {{shortcut_1}} oder {{shortcut_2}} zum Abschließen",
     "lockAngle": "Halte {{shortcut}} gedrückt, um den Winkel einzuschränken",
     "resize": "Halte {{shortcut_1}} gedrückt, um die Proportionen beizubehalten.\n{{shortcut_2}} gedrückt halten, um von der Mitte aus zu skalieren",
     "resizeImage": "Halte {{shortcut_1}} gedrückt, um frei zu skalieren.\n{{shortcut_2}} gedrückt halten, um von der Mitte aus zu skalieren",
+    "resizeStickyNote": "Halte {{shortcut_1}} gedrückt, um frei zu skalieren.\n{{shortcut_2}} gedrückt halten, um von der Mitte aus zu skalieren",
     "rotate": "Halte {{shortcut}} gedrückt, um den Winkel einzuschränken",
-    "toggleArrowhead": "",
+    "toggleArrowhead": "Doppelklicke, um die Pfeilspitze umzuschalten",
     "lineEditor_info": "Halte {{shortcut_1}} gedrückt und doppelklicke oder drücke {{shortcut_2}}, um Punkte zu bearbeiten",
     "lineEditor_line_info": "Doppelklicken oder {{shortcut}} drücken, um Punkte zu bearbeiten",
     "lineEditor_pointSelected": "Drücke {{shortcut_1}}, um Punkt(e) zu entfernen,\n{{shortcut_2}} zum Duplizieren, oder ziehe zum Verschieben",
@@ -616,10 +624,10 @@
     "shades": "Schattierungen",
     "hexCode": "Hex-Code",
     "noShades": "Keine Schattierungen für diese Farbe verfügbar",
-    "invalidColor": "",
-    "invalidHexLength": "",
-    "topPicksTip": "",
-    "resetTopPicks": ""
+    "invalidColor": "Keine gültige Farbe",
+    "invalidHexLength": "Der Hex-Code muss 3, 4, 6 oder 8 Zeichen lang sein",
+    "topPicksTip": "Tipp: Ziehe eine beliebige Farbe auf deine Favoriten, um sie anzuheften",
+    "resetTopPicks": "Standard-Favoriten wiederherstellen"
   },
   "overwriteConfirm": {
     "action": {
@@ -685,7 +693,7 @@
     "placeholder": {
       "title": "Gestalte dein Diagramm",
       "description": "Beschreibe das Diagramm, das du erstellen möchtest, und wir generieren es für dich.",
-      "hint": ""
+      "hint": "Derzeit unterstützen wir Flussdiagramme sowie Sequenz-, Klassen-, Zustands- und Entity-Relationship-Diagramme."
     },
     "preview": "Vorschau",
     "insert": "Einfügen",
