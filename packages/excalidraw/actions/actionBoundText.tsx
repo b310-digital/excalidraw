@@ -5,6 +5,8 @@ import {
   VERTICAL_ALIGN,
   arrayToMap,
   getFontString,
+  getStrokeWidthByKey,
+  isTransparent,
 } from "@excalidraw/common";
 import {
   getOriginalContainerHeightFromCache,
@@ -14,15 +16,19 @@ import {
 } from "@excalidraw/element";
 
 import {
+  DEFAULT_BOUND_TEXT_LABEL_POSITION,
   computeBoundTextPosition,
   computeContainerDimensionForBoundText,
   getBoundTextElement,
+  normalizeStickyNoteFontSize,
   redrawTextBoundingBox,
+  updateStickyNoteLayout,
 } from "@excalidraw/element";
 
 import {
   hasBoundTextElement,
   isArrowElement,
+  isStickyNoteElement,
   isTextBindableContainer,
   isTextElement,
   isUsingAdaptiveRadius,
@@ -85,17 +91,26 @@ export const actionUnbindText = register({
           width,
           height,
           text: boundTextElement.originalText,
+          baseFontSize: null,
           x,
           y,
+          labelPosition: null,
         });
         app.scene.mutateElement(element, {
           boundElements: element.boundElements?.filter(
             (ele) => ele.id !== boundTextElement.id,
           ),
-          height: originalContainerHeight
-            ? originalContainerHeight
-            : element.height,
         });
+        if (isStickyNoteElement(element)) {
+          // an empty note sits at its base height; bound arrows follow
+          updateStickyNoteLayout(element, app.scene);
+        } else {
+          app.scene.mutateElement(element, {
+            height: originalContainerHeight
+              ? originalContainerHeight
+              : element.height,
+          });
+        }
       }
     });
     return {
@@ -153,18 +168,38 @@ export const actionBindText = register({
       textElement = selectedElements[1] as ExcalidrawTextElement;
       container = selectedElements[0] as ExcalidrawTextContainer;
     }
+    // a note and its label share one ink: the text the user styled wins,
+    // unless it is transparent (a note's label never is)
+    const stickyInk = isStickyNoteElement(container)
+      ? isTransparent(textElement.strokeColor)
+        ? container.strokeColor
+        : textElement.strokeColor
+      : null;
     app.scene.mutateElement(textElement, {
       containerId: container.id,
       verticalAlign: VERTICAL_ALIGN.MIDDLE,
       textAlign: TEXT_ALIGN.CENTER,
       autoResize: true,
       angle: (isArrowElement(container) ? 0 : container?.angle ?? 0) as Radians,
+      labelPosition: isArrowElement(container)
+        ? DEFAULT_BOUND_TEXT_LABEL_POSITION
+        : null,
+      ...(stickyInk
+        ? {
+            baseFontSize: normalizeStickyNoteFontSize(
+              textElement.baseFontSize ?? textElement.fontSize,
+            ),
+            strokeColor: stickyInk,
+          }
+        : null),
     });
     app.scene.mutateElement(container, {
       boundElements: (container.boundElements || []).concat({
         type: "text",
         id: textElement.id,
       }),
+      // the footer paints with the note's ink
+      ...(stickyInk ? { strokeColor: stickyInk } : null),
     });
     const originalContainerHeight = container.height;
     redrawTextBoundingBox(textElement, container, app.scene);
@@ -249,7 +284,10 @@ export const actionWrapTextInContainer = register({
           fillStyle: appState.currentItemFillStyle,
           strokeColor: appState.currentItemStrokeColor,
           roughness: appState.currentItemRoughness,
-          strokeWidth: appState.currentItemStrokeWidth,
+          strokeWidth: getStrokeWidthByKey(
+            "rectangle",
+            appState.currentItemStrokeWidthKey,
+          ),
           strokeStyle: appState.currentItemStrokeStyle,
           roundness:
             appState.currentItemRoundness === "round"

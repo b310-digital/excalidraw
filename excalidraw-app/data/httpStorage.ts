@@ -209,9 +209,14 @@ export const loadFromHttpStorage = async (
   const getResponse = await fetch(
     `${HTTP_STORAGE_BACKEND_URL}/rooms/${roomId}`,
   );
+  if (!getResponse.ok) {
+    return null;
+  }
   const buffer = await getResponse.arrayBuffer();
   const elements = getSyncableElements(
-    restoreElements(await getElementsFromBuffer(buffer, roomKey), null),
+    restoreElements(await getElementsFromBuffer(buffer, roomKey), null, {
+      deleteInvisibleElements: true,
+    }),
   );
   return elements;
 };

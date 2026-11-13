@@ -17,7 +17,6 @@ export const AppMainMenu: React.FC<{
   isCollaborating: boolean;
   isCollabEnabled: boolean;
   theme: Theme | "system";
-  setTheme: (theme: Theme | "system") => void;
   refresh: () => void;
 }> = React.memo((props) => {
   const { t } = useI18n();
@@ -47,7 +46,7 @@ export const AppMainMenu: React.FC<{
           }?utm_source=signin&utm_medium=app&utm_content=hamburger`}
           className="highlighted"
         >
-          {isExcalidrawPlusSignedUser ? "Sign in" : "Sign up"}
+          {isExcalidrawPlusSignedUser ? t("labels.signIn") : t("labels.signUp")}
         </MainMenu.ItemLink>
       )}
       {isDevEnv() && (
@@ -69,11 +68,7 @@ export const AppMainMenu: React.FC<{
       )}
       <MainMenu.Separator />
       <MainMenu.DefaultItems.Preferences />
-      <MainMenu.DefaultItems.ToggleTheme
-        allowSystemTheme
-        theme={props.theme}
-        onSelect={props.setTheme}
-      />
+      <MainMenu.DefaultItems.ToggleTheme allowSystemTheme theme={props.theme} />
       <MainMenu.ItemCustom>
         <LanguageList style={{ width: "100%" }} />
       </MainMenu.ItemCustom>
