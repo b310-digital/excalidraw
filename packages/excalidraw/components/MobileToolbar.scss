@@ -41,7 +41,7 @@
     // …but not on checked buttons, where the sticky hover of the tap that
     // checked them would otherwise suppress the checked highlight
     &.ToolIcon--checked .ToolIcon__icon:hover {
-      background-color: var(--color-surface-primary-container);
+      background-color: var(--color-primary-light);
     }
 
     svg {

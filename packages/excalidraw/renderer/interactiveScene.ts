@@ -200,7 +200,7 @@ const highlightPoint = <Point extends LocalPoint | GlobalPoint>(
   context.translate(appState.scrollX, appState.scrollY);
 
   context.fillStyle = getThemedColor(
-    "rgba(105, 101, 219, 0.4)",
+    "rgba(0, 163, 211, 0.4)",
     appState.theme,
   );
 
@@ -1280,7 +1280,7 @@ const renderFocusPointConnectionLine = (
   context.translate(appState.scrollX, appState.scrollY);
 
   context.strokeStyle = getThemedColor(
-    "rgba(134, 131, 226, 0.6)",
+    "rgba(0, 163, 211, 0.6)",
     appState.theme,
   );
   context.lineWidth = 1 / appState.zoom.value;
@@ -1304,13 +1304,13 @@ const renderFocusPointCicle = (
   context.save();
   context.translate(appState.scrollX, appState.scrollY);
   context.strokeStyle = getThemedColor(
-    "rgba(134, 131, 226, 0.6)",
+    "rgba(0, 163, 211, 0.6)",
     appState.theme,
   );
   context.lineWidth = 1 / appState.zoom.value;
   context.setLineDash([]);
   context.fillStyle = getThemedColor(
-    isHovered ? "rgba(134, 131, 226, 0.9)" : "rgba(255, 255, 255, 0.9)",
+    isHovered ? "rgba(0, 163, 211, 0.9)" : "rgba(255, 255, 255, 0.9)",
     appState.theme,
   );
 

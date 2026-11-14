@@ -57,7 +57,7 @@
   --scrollbar-thumb: var(--button-gray-2);
   --scrollbar-thumb-hover: var(--button-gray-3);
 
-  --color-slider-track: hsl(240, 100%, 90%);
+  --color-slider-track: #b3e3f2;
   --color-slider-thumb: var(--color-gray-80);
 
   --modal-shadow: 0px 100px 80px rgba(0, 0, 0, 0.07),
@@ -91,6 +91,8 @@
   --color-primary-darker: #0067a7;
   --color-primary-darkest: #00456f;
   --color-primary-light: #00a3d3;
+  --color-primary-light-darker: var(--color-primary-darker);
+  --color-primary-hover: var(--color-primary-darker);
 
   --color-gray-10: #f5f5f5;
   --color-gray-20: #ebebeb;
@@ -146,7 +148,7 @@
   --color-success-contrast-active: #6edf74;
 
   --color-logo-icon: var(--color-primary);
-  --color-logo-text: #190064;
+  --color-logo-text: var(--color-primary-darkest);
 
   --border-radius-md: 0.375rem;
   --border-radius-lg: 0.5rem;
@@ -157,12 +159,12 @@
   --color-surface-lowest: #ffffff;
   --color-on-surface: #1b1b1f;
   --color-brand-hover: var(--color-primary-darker);
-  --color-on-primary-container: #030064;
-  --color-surface-primary-container: #e0dfff;
+  --color-on-primary-container: var(--color-primary-darker);
+  --color-surface-primary-container: #cceef6;
   --color-brand-active: var(--color-primary-darker);
   --color-border-outline: #767680;
   --color-border-outline-variant: #c5c5d0;
-  --color-surface-primary-container: #e0dfff;
+  --color-surface-primary-container: #cceef6;
 
   --color-badge: #0b6513;
   --background-color-badge: #d3ffd2;
@@ -240,7 +242,7 @@
     --color-primary-darkest: #00456f;
     --color-primary-light: #00a3d3;
 
-    --color-slider-track: hsl(244, 23%, 39%);
+    --color-slider-track: var(--color-primary-darkest);
 
     // will be inverted to a lighter color.
     --color-selection: var(--color-primary);
@@ -271,7 +273,7 @@
     --color-muted-background: var(--color-gray-40);
     --color-muted-background-darker: var(--color-gray-20);
 
-    --color-logo-text: #e2dfff;
+    --color-logo-text: #fff;
 
     --color-surface-high: hsl(245, 10%, 21%);
     --color-surface-low: hsl(240, 8%, 15%);
@@ -279,11 +281,11 @@
     --color-surface-lowest: hsl(0, 0%, 7%);
     --color-on-surface: #e3e3e8;
     --color-brand-hover: var(--color-primary-darker);
-    --color-on-primary-container: #e0dfff;
-    --color-surface-primary-container: #403e6a;
-    --color-brand-active: #d0ccff;
+    --color-on-primary-container: #fff;
+    --color-surface-primary-container: var(--color-primary-darkest);
+    --color-brand-active: var(--color-primary-darker);
     --color-border-outline: #8e8d9c;
     --color-border-outline-variant: #46464f;
-    --color-surface-primary-container: #403e6a;
+    --color-surface-primary-container: var(--color-primary-darkest);
   }
 }

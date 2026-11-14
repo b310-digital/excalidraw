@@ -3,7 +3,7 @@ import { COLOR_WHITE, THEME, applyDarkModeFilter } from "@excalidraw/common";
 import type { StaticCanvasRenderConfig } from "../scene/types";
 import type { AppState, StaticCanvasAppState } from "../types";
 
-export const DEFAULT_SELECTION_COLOR = "#6965db";
+export const DEFAULT_SELECTION_COLOR = "#00a3d3";
 
 /**
  * Returns the theme's selection color (`--color-selection`), read from the
