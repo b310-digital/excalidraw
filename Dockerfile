@@ -11,6 +11,8 @@ COPY packages/excalidraw/package.json ./packages/excalidraw/
 COPY packages/common/package.json ./packages/common/
 COPY packages/element/package.json ./packages/element/
 COPY packages/math/package.json ./packages/math/
+COPY packages/fractional-indexing/package.json ./packages/fractional-indexing/
+COPY packages/laser-pointer/package.json ./packages/laser-pointer/
 
 # do not ignore optional dependencies:
 # Error: Cannot find module @rollup/rollup-linux-x64-gnu
@@ -30,6 +32,6 @@ FROM --platform=${TARGETPLATFORM} nginxinc/nginx-unprivileged:1.30.2-alpine-slim
 
 COPY --from=production_buildstage /opt/node_app/excalidraw-app/build /usr/share/nginx/html
 
-HEALTHCHECK CMD wget -q -O /dev/null http://localhost || exit 1
+HEALTHCHECK CMD wget -q -O /dev/null http://127.0.0.1:8080 || exit 1
 
 FROM build as development
