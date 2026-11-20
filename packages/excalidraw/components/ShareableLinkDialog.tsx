@@ -16,12 +16,14 @@ export type ShareableLinkDialogProps = {
 
   onCloseRequest: () => void;
   setErrorMessage: (error: string) => void;
+  children?: React.ReactNode;
 };
 
 export const ShareableLinkDialog = ({
   link,
   onCloseRequest,
   setErrorMessage,
+  children,
 }: ShareableLinkDialogProps) => {
   const { t } = useI18n();
   const [, setJustCopied] = useState(false);
@@ -71,6 +73,7 @@ export const ShareableLinkDialog = ({
             }}
           />
         </div>
+        {children}
         <div className="ShareableLinkDialog__description">
           🔒 {t("alerts.uploadedSecurly")}
         </div>
