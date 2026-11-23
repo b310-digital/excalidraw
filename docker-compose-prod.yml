@@ -1,6 +1,8 @@
 include:
-  - path: docker-compose-services.yml
-    # prod defaults (service ports 5011/5012); values from the
+  - path:
+      - docker-compose-services.yml
+      - docker-compose-services.prod.yml
+    # prod defaults (service ports 5011/5012, POSTGRES_DB); values from the
     # project env (.env, .env.production.local, shell) take precedence
     env_file: .env.production
 
@@ -14,6 +16,7 @@ services:
         - VITE_APP_STORAGE_PORT=${VITE_APP_STORAGE_PORT:-5011}
         - VITE_APP_ROOM_PORT=${VITE_APP_ROOM_PORT:-5012}
     container_name: excalidraw
+    restart: always
     ports:
       - "${PROD_APP_PORT:-5010}:8080"
     healthcheck:
