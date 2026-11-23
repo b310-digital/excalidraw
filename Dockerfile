@@ -35,3 +35,13 @@ COPY --from=production_buildstage /node/app/excalidraw-app/build /usr/share/ngin
 HEALTHCHECK CMD wget -q -O /dev/null http://127.0.0.1:8080 || exit 1
 
 FROM build as development
+
+# run as the unprivileged node user, remapped to the host user (see USER_UID/USER_GID
+# in .env.default), so files created in the mounted source tree belong to the host user
+ARG USER_UID=1000
+ARG USER_GID=1000
+RUN groupmod -o -g ${USER_GID} node \
+    && usermod -o -u ${USER_UID} -g ${USER_GID} node \
+    && mkdir -p /node/app/node_modules \
+    && chown -R node:node /node/app /home/node
+USER node

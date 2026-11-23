@@ -30,6 +30,8 @@ yarn start --host
 
 This will start excalidraw on your configured `VITE_APP_PORT` (default `3000`).
 
+The app container runs as the unprivileged `node` user, mapped to `USER_UID`/`USER_GID` (default `1000`), so files created in your checkout belong to your host user. If `id -u`/`id -g` differ from `1000`, set both in your `.env`. If you used the container before it ran as `node`, remove the old `node_modules` volume (`docker volume rm <project>_node_modules`) and files created by root in your checkout (e.g. `sudo rm -rf excalidraw-app/node_modules/.vite`) once.
+
 If you prefer to have your dev server running on your host, you can use `yarn docker:services:up` and run the yarn commands directly on your host.
 
 To shut down all docker containers simply run `yarn docker:dev:down` (`yarn docker:services:down` respectively) on your host.
