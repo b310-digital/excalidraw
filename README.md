@@ -61,11 +61,11 @@ or if you have `yarn` available on your host you also can simply run
 yarn docker:prod:up
 ```
 
-(this additionally loads `.env.production.local`, see hint below)
+(this additionally loads `.env.production.local` if it exists, see hint below)
 
-This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`).
+This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`). In prod, the storage backend and the collab server are published on `VITE_APP_STORAGE_PORT` (default `5011`) and `VITE_APP_ROOM_PORT` (default `5012`), the database defaults to `excalidraw-prod` and postgres is not published on the host (see `.env.production` and `docker-compose-services.prod.yml`). All containers are restarted automatically (`restart: always`).
 
-Hint: If you want to override things in comparison to your dev environment, just create .env.production.local and define changed variables.
+Hint: If you want to override things in comparison to your dev environment, just create an (optional) .env.production.local and define changed variables.
 
 ### README from upstream
 
