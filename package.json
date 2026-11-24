@@ -95,7 +95,7 @@
     "docker:services": "docker compose -f docker-compose-services.yml",
     "docker:services:up": "yarn docker:services -- up -d",
     "docker:services:down": "yarn docker:services -- down",
-    "docker:prod": "docker compose -f docker-compose-prod.yml --env-file .env --env-file .env.production.local",
+    "docker:prod": "docker compose -f docker-compose-prod.yml --env-file .env $([ -f .env.production.local ] && echo --env-file .env.production.local)",
     "docker:prod:up": "yarn docker:prod -- up --build -d",
     "docker:prod:down": "yarn docker:prod -- down"
   },

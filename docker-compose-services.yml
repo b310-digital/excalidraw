@@ -12,7 +12,7 @@ services:
     ports:
       - "${VITE_APP_STORAGE_PORT:-8080}:8080"
     environment:
-      STORAGE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-excalidraw-dev}
+      STORAGE_URI: postgresql://${POSTGRES_USER:-excalidraw-user}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-excalidraw-dev}
 
   excalidraw-room:
     build:
@@ -27,8 +27,8 @@ services:
     # command: -c ssl=on -c ssl_cert_file=/var/lib/postgresql/server.crt -c ssl_key_file=/var/lib/postgresql/server.key
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
-      POSTGRES_DB: ${POSTGRES_DB:-excalidraw}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-excalidraw-dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_USER: ${POSTGRES_USER:-excalidraw-user}
     volumes:
       - postgres_data:/var/lib/postgresql/data/pgdata

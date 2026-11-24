@@ -9,6 +9,8 @@ services:
       target: development
       args:
         - NODE_ENV=development
+        - USER_UID=${USER_UID:-1000}
+        - USER_GID=${USER_GID:-1000}
     ports:
       - "${VITE_APP_PORT:-3000}:3000"
     healthcheck:
@@ -18,8 +20,8 @@ services:
       - VITE_APP_PORT=3000
       - VITE_APP_STORAGE_PROXY_TARGET=http://excalidraw-storage-backend:8080
     volumes:
-      - node_modules:/opt/node_app/node_modules
-      - ./:/opt/node_app/
+      - node_modules:/node/app/node_modules
+      - ./:/node/app
 
 volumes:
   node_modules:

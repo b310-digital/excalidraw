@@ -30,6 +30,8 @@ yarn start --host
 
 This will start excalidraw on your configured `VITE_APP_PORT` (default `3000`).
 
+The app container runs as the unprivileged `node` user, mapped to `USER_UID`/`USER_GID` (default `1000`), so files created in your checkout belong to your host user. If `id -u`/`id -g` differ from `1000`, set both in your `.env`. If you used the container before it ran as `node`, remove the old `node_modules` volume (`docker volume rm <project>_node_modules`) and files created by root in your checkout (e.g. `sudo rm -rf excalidraw-app/node_modules/.vite`) once.
+
 If you prefer to have your dev server running on your host, you can use `yarn docker:services:up` and run the yarn commands directly on your host.
 
 To shut down all docker containers simply run `yarn docker:dev:down` (`yarn docker:services:down` respectively) on your host.
@@ -61,11 +63,11 @@ or if you have `yarn` available on your host you also can simply run
 yarn docker:prod:up
 ```
 
-(this additionally loads `.env.production.local`, see hint below)
+(this additionally loads `.env.production.local` if it exists, see hint below)
 
-This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`).
+This will start excalidraw on your configured `PROD_APP_PORT` (default `5010`). In prod, the storage backend and the collab server are published on `VITE_APP_STORAGE_PORT` (default `5011`) and `VITE_APP_ROOM_PORT` (default `5012`), the database defaults to `excalidraw-prod` and postgres is not published on the host (see `.env.production` and `docker-compose-services.prod.yml`). All containers are restarted automatically (`restart: always`).
 
-Hint: If you want to override things in comparison to your dev environment, just create .env.production.local and define changed variables.
+Hint: If you want to override things in comparison to your dev environment, just create an (optional) .env.production.local and define changed variables.
 
 ### README from upstream
 

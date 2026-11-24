@@ -1,0 +1,12 @@
+# Prod-only overrides for docker-compose-services.yml (merged via docker-compose-prod.yml)
+services:
+  excalidraw-storage-backend:
+    restart: always
+
+  excalidraw-room:
+    restart: always
+
+  postgres:
+    restart: always
+    # do not publish postgres on the host in prod
+    ports: !reset []
